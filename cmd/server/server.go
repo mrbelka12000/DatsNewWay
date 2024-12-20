@@ -82,7 +82,7 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 				food := resp.Food[i]
 				if head[0] == food.C[0] && head[1] == food.C[1] && head[2] == food.C[2] {
 					foodID = i
-					totalPoints = food.Points
+					totalPoints += food.Points
 					break
 				}
 			}
