@@ -1,21 +1,25 @@
 package config
 
 import (
-	"errors"
-	"os"
+	"github.com/caarlos0/env/v10"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Token string
+	Token string `env:"token,required"`
 }
 
 func LoadConfig() (*Config, error) {
-	token := os.Getenv("token")
-	if token == "" {
-		return nil, errors.New("token environment variable not set")
+	err := godotenv.Load(".env")
+	if err != nil {
+		return nil, err
 	}
 
-	return &Config{
-		Token: token,
-	}, nil
+	cfg := new(Config)
+
+	if err = env.Parse(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
 }
