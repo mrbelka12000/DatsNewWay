@@ -1,12 +1,14 @@
 package client
 
 import (
-	"DatsNewWay/entity"
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+
+	"DatsNewWay/entity"
 )
 
 type Client struct {
@@ -15,7 +17,7 @@ type Client struct {
 }
 
 const (
-	testDomain = "https://games-test.datsteam.dev/play/snake3d"
+	testDomain = "https://games-test.datsteam.dev/play/snake3d/player/move"
 	domain     = "https://games.datsteam.dev/play/snake3d"
 )
 
@@ -32,7 +34,7 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 		return entity.Response{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, testDomain, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, testDomain, bytes.NewReader(body))
 	if err != nil {
 		return entity.Response{}, err
 	}
@@ -45,6 +47,10 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 		return entity.Response{}, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return entity.Response{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 
 	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {

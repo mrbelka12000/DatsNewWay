@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
+	"time"
+
+	"github.com/rs/zerolog/log"
+
+	"DatsNewWay/algo"
 	"DatsNewWay/client"
 	"DatsNewWay/config"
-	"context"
-	"fmt"
-	"github.com/rs/zerolog/log"
-	"time"
+	"DatsNewWay/entity"
 )
 
 func main() {
@@ -22,21 +25,39 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create client")
 	}
 
-	_ = cli
-
-	if err = start(ctx); err != nil {
+	if err = start(ctx, cli); err != nil {
 		log.Fatal().Err(err).Msg("failed to start server")
 	}
 }
 
-func start(ctx context.Context) error {
+func start(ctx context.Context, cl *client.Client) error {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
+
+	var (
+		resp entity.Response
+		err  error
+	)
+
+	resp, err = cl.Get(ctx, entity.Payload{})
+	if err != nil {
+		log.Err(err).Msg("failed to create client")
+		return err
+	}
 
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("BELKA MONSTER")
+
+			payload := algo.GetNextDirection(resp)
+
+			resp, err = cl.Get(ctx, payload)
+			if err != nil {
+				log.Err(err).Msg("failed to create client")
+				continue
+			}
+
+			log.Info().Msg("successfully send data")
 		case <-ctx.Done():
 			return ctx.Err()
 		}
