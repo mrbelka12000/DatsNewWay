@@ -150,8 +150,6 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 				continue
 			}
 
-			used[[3]int{cp[0], cp[1], cp[2]}] = true
-
 			for _, dir := range dirs {
 				xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
@@ -161,7 +159,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 				}
 
 				// Check for obstacles and already visited points
-				if obst[[3]int{xx, yy, zz}] || used[[3]int{xx, yy, zz}] {
+				if obst[[3]int{xx, yy, zz}] {
 					continue
 				}
 

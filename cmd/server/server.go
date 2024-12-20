@@ -69,9 +69,9 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 					resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
 					resp.Snakes[i].OldDirection = snake.Direction
 				} else {
-					resp.Snakes[i].Geometry[0][0] += snake.OldDirection[0]
-					resp.Snakes[i].Geometry[0][1] += snake.OldDirection[1]
-					resp.Snakes[i].Geometry[0][2] += snake.OldDirection[2]
+					resp.Snakes[i].Geometry[0][0] += resp.Snakes[i].OldDirection[0]
+					resp.Snakes[i].Geometry[0][1] += resp.Snakes[i].OldDirection[1]
+					resp.Snakes[i].Geometry[0][2] += resp.Snakes[i].OldDirection[2]
 				}
 			}
 
