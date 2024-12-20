@@ -1,6 +1,9 @@
 package algo
 
 import (
+	"fmt"
+	"math"
+
 	"DatsNewWay/entity"
 )
 
@@ -75,19 +78,35 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 	used := make(map[[3]int]bool)
 	for _, snake := range r.Snakes {
-		if snake.Status == snakeStatusAlive {
-			dir := runner(r, snake.Geometry[0], obst, food, used)
-			obj.Snakes = append(obj.Snakes, entity.Snake{
-				Id:        snake.Id,
-				Direction: dir,
-			})
+		if snake.Status == snakeStatusDead {
+			continue
 		}
+
+		var (
+			minDist = math.MaxInt32
+			minInd  int
+		)
+
+		for i, f := range r.Food {
+			dist := getManhattanDistance(snake.Geometry[0], f.C)
+			if dist < minDist {
+				minDist = dist
+				minInd = i
+			}
+		}
+
+		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
+		//dir := runner(r, snake.Geometry[0], obst, food, used)
+		obj.Snakes = append(obj.Snakes, entity.Snake{
+			Id:        snake.Id,
+			Direction: dir,
+		})
 	}
 
 	return obj
 }
 
-func runner(r entity.Response, currPoint []int, obst, food, used map[[3]int]bool) []int {
+func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]int]bool) []int {
 	dirs := [6][]int{
 		{1, 0, 0},
 		{-1, 0, 0},
@@ -96,10 +115,12 @@ func runner(r entity.Response, currPoint []int, obst, food, used map[[3]int]bool
 		{0, 0, 1},
 		{0, 0, -1},
 	}
+
 	type info struct {
 		point []int
 		steps []int
 		cost  int
+		heur  int
 	}
 
 	step := make(map[[3]int]info)
@@ -107,55 +128,72 @@ func runner(r entity.Response, currPoint []int, obst, food, used map[[3]int]bool
 	q := []info{
 		{
 			point: currPoint,
+			cost:  0,
+			heur:  heuristic(currPoint, target),
 		},
 	}
 
 	for len(q) > 0 {
-
-		curr := q[0]
-		q = q[1:]
+		// Find the node with the smallest f = cost + heuristic
+		idx := 0
+		for i := 1; i < len(q); i++ {
+			if q[i].cost+q[i].heur < q[idx].cost+q[idx].heur {
+				idx = i
+			}
+		}
+		curr := q[idx]
+		q = append(q[:idx], q[idx+1:]...)
 
 		cp := curr.point
-
-		if food[[3]int{cp[0], cp[1], cp[2]}] && !used[[3]int{cp[0], cp[1], cp[2]}] {
-			used[[3]int{cp[0], cp[1], cp[2]}] = true
+		if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
+			fmt.Println("Target reached:", cp, curr.steps)
 			return curr.steps
 		}
+
+		used[[3]int{cp[0], cp[1], cp[2]}] = true
 
 		for _, dir := range dirs {
 			xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
-			if xx < 0 || xx >= r.MapSize[0] || yy < 0 || yy >= r.MapSize[1] || zz < 0 || zz >= r.MapSize[2] {
+			if xx < 0 || xx > r.MapSize[0] || yy < 0 || yy > r.MapSize[1] || zz < 0 || zz > r.MapSize[2] {
 				continue
 			}
 
-			if obst[[3]int{xx, yy, zz}] {
+			if obst[[3]int{xx, yy, zz}] || used[[3]int{xx, yy, zz}] {
 				continue
 			}
 
-			_, ok := step[[3]int{xx, yy, zz}]
-			if !ok {
-				steps := dir
-				if len(curr.steps) != 0 {
-					steps = curr.steps
-				}
+			steps := dir
+			if len(curr.steps) != 0 {
+				steps = curr.steps
+			}
 
+			newCost := curr.cost + 1
+			heur := heuristic([]int{xx, yy, zz}, target)
+
+			if _, ok := step[[3]int{xx, yy, zz}]; !ok || newCost < step[[3]int{xx, yy, zz}].cost {
 				step[[3]int{xx, yy, zz}] = info{
 					point: []int{xx, yy, zz},
 					steps: steps,
-					cost:  curr.cost + 1,
+					cost:  newCost,
+					heur:  heur,
 				}
 
 				q = append(q, info{
 					point: []int{xx, yy, zz},
 					steps: steps,
-					cost:  curr.cost + 1,
+					cost:  newCost,
+					heur:  heur,
 				})
 			}
 		}
 	}
 
 	return nil
+}
+
+func heuristic(currPoint []int, target []int) int {
+	return abs(currPoint[0]-target[0]) + abs(currPoint[1]-target[1]) + abs(currPoint[2]-target[2])
 }
 
 func getDirection(head, target []int) []int {
