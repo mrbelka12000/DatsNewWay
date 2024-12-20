@@ -14,11 +14,6 @@ const (
 	snakeStatusDead  = "dead"
 )
 
-type node struct {
-	point []int
-	next  *node
-}
-
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
 }
@@ -94,7 +89,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 type info struct {
 	point []int
-	steps []int
+	path  [][]int // Stores the path as a list of points
 	cost  int
 	heur  int
 }
@@ -114,20 +109,25 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 	q := &PQ{}
 	heap.Init(q)
 
+	// Start with the current point
 	heap.Push(q, info{
 		point: currPoint,
+		path:  [][]int{}, // Start path with the initial point
 		cost:  0,
 		heur:  heuristic(currPoint, target),
 	})
 
 	for q.Len() > 0 {
-
 		curr := heap.Pop(q).(info)
-
 		cp := curr.point
+
+		// If the target is reached, return the path
 		if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
-			fmt.Println("Target reached:", currPoint, curr.steps)
-			return curr.steps
+			fmt.Println("Target reached:", target, cp, curr.path)
+			if len(curr.path) > 0 {
+				return curr.path[0]
+			}
+			continue
 		}
 
 		used[[3]int{cp[0], cp[1], cp[2]}] = true
@@ -135,33 +135,36 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 		for _, dir := range dirs {
 			xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
+			// Check boundaries
 			if xx < 0 || xx > r.MapSize[0] || yy < 0 || yy > r.MapSize[1] || zz < 0 || zz > r.MapSize[2] {
 				continue
 			}
 
+			// Check for obstacles and already visited points
 			if obst[[3]int{xx, yy, zz}] || used[[3]int{xx, yy, zz}] {
 				continue
-			}
-
-			steps := dir
-			if len(curr.steps) != 0 {
-				steps = curr.steps
 			}
 
 			newCost := curr.cost + 1
 			heur := heuristic([]int{xx, yy, zz}, target)
 
+			// If a better path is found, update the step map and push the new state into the queue
 			if _, ok := step[[3]int{xx, yy, zz}]; !ok || newCost < step[[3]int{xx, yy, zz}].cost {
+				// Create a copy of the current path and add the new point
+				newPath := make([][]int, len(curr.path))
+				copy(newPath, curr.path)
+				newPath = append(newPath, dir)
+
 				step[[3]int{xx, yy, zz}] = info{
 					point: []int{xx, yy, zz},
-					steps: steps,
+					path:  newPath,
 					cost:  newCost,
 					heur:  heur,
 				}
 
 				heap.Push(q, info{
 					point: []int{xx, yy, zz},
-					steps: steps,
+					path:  newPath,
 					cost:  newCost,
 					heur:  heur,
 				})
@@ -169,7 +172,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 		}
 	}
 
-	return nil
+	return nil // No path found
 }
 
 func heuristic(currPoint []int, target []int) int {
