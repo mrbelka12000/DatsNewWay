@@ -62,10 +62,17 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 	for _, snake := range req.Snakes {
 
 		for i := 0; i < len(resp.Snakes); i++ {
-			if resp.Snakes[i].Id == snake.Id && len(snake.Direction) > 0 {
-				resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
-				resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
-				resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
+			if resp.Snakes[i].Id == snake.Id {
+				if len(snake.Direction) > 0 {
+					resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
+					resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
+					resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
+					resp.Snakes[i].OldDirection = snake.Direction
+				} else {
+					resp.Snakes[i].Geometry[0][0] += snake.OldDirection[0]
+					resp.Snakes[i].Geometry[0][1] += snake.OldDirection[1]
+					resp.Snakes[i].Geometry[0][2] += snake.OldDirection[2]
+				}
 			}
 
 			ss := resp.Snakes[i]
