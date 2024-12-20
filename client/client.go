@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"time"
 
 	"DatsNewWay/entity"
 )
@@ -74,8 +73,8 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 	}
 
 	go func() {
-		fileName := fmt.Sprintf("%v_%v.json", time.Now().Minute(), time.Now().Unix())
-		file, err := os.Create("check/" + fileName)
+		fileName := fmt.Sprintf("plot.json")
+		file, err := os.Create(fileName)
 		if err != nil {
 			fmt.Println(err, "create file")
 			return
