@@ -69,7 +69,7 @@ def update(frame):
     ax.clear()
 
     # Load the data from the file
-    filepath = 'check/2_2.json'
+    filepath = 'plot.json'
     data = load_and_extract_data(filepath)
 
     # Plot each type of entity
