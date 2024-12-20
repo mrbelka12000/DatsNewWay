@@ -14,9 +14,38 @@ const (
 	snakeStatusDead  = "dead"
 )
 
+var center [3]int
+
+func calculateCenter(maxX, maxY, maxZ int) (int, int, int) {
+	centerX := maxX / 2
+	centerY := maxY / 2
+	centerZ := maxZ / 2
+	return centerX, centerY, centerZ
+}
+
+func distanceToCenter(x, y, z int) float64 {
+	return math.Sqrt(math.Pow(float64(x-center[0]), 2) + math.Pow(float64(y-center[1]), 2) + math.Pow(float64(z-center[2]), 2))
+}
+
+// Функция, чтобы проверить, является ли точка нехорошей
+func isBadPoint(currentPosition, food []int) bool {
+	foodDist := distanceToCenter(food[0], food[1], food[2])
+	currentDist := distanceToCenter(currentPosition[0], currentPosition[1], currentPosition[2])
+
+	// Проверяем, если точка еды дальше от центра, чем текущая точка
+	if foodDist > currentDist {
+		return true
+	}
+
+	return false
+}
+
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
+	center[0], center[1], center[2] = calculateCenter(r.MapSize[0], r.MapSize[1], r.MapSize[2])
 	return bfs(r)
 }
+
+var flag = false
 
 func bfs(r entity.Response) (obj entity.Payload) {
 
@@ -62,7 +91,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 		var (
 			minDist = math.MaxInt32
-			minInd  int
+			minInd  = -1
 		)
 
 		for i, f := range r.Food {
@@ -70,10 +99,20 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				break
 			}
 			dist := getManhattanDistance(snake.Geometry[0], f.C)
+
+			if !flag && isBadPoint(snake.Geometry[0], f.C) {
+				continue
+			}
+
 			if dist < minDist {
 				minDist = dist
 				minInd = i
 			}
+		}
+
+		if minInd == -1 {
+			flag = true
+			minInd = 0
 		}
 
 		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
