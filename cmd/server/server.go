@@ -22,20 +22,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	resp.MapSize[0] = 30
-	resp.MapSize[1] = 30
-
-	for i := 0; i < len(resp.Food); i++ {
-		if resp.Food[i].C[0] > 30 || resp.Food[i].C[1] > 30 {
-			resp.Food = slices.Delete(resp.Food, i, i+1)
-		}
-	}
-
-	for i := 0; i < len(resp.Fences); i++ {
-		if resp.Fences[i][0] > 30 || resp.Fences[i][1] > 30 {
-			resp.Fences = slices.Delete(resp.Fences, i, i+1)
-		}
-	}
 
 	http.HandleFunc("/next", ServeNext)
 	fmt.Println("Server started on :8080")
@@ -66,11 +52,25 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ss := resp.Snakes[i]
+			head := ss.Geometry[0]
 			for _, fence := range resp.Fences {
-				if ss.Geometry[0][0] == fence[0] && ss.Geometry[0][1] == fence[1] && ss.Geometry[0][2] == fence[2] && ss.Geometry[0][3] == fence[2] {
+				if head[0] == fence[0] && head[1] == fence[1] && head[2] == fence[2] && head[3] == fence[2] {
 					resp.Snakes[i].Status = "dead"
-					fmt.Println("Snake dead", snake.Id)
+					fmt.Println("suka")
 				}
+			}
+
+			var foodID int = -1
+			for i := 0; i < len(resp.Food); i++ {
+				food := resp.Food[i]
+				if head[0] == food.C[0] && head[1] == food.C[1] && head[2] == food.C[2] {
+					foodID = i
+					break
+				}
+			}
+
+			if foodID != -1 {
+				resp.Food = slices.Delete(resp.Food, foodID, foodID+1)
 			}
 		}
 	}
