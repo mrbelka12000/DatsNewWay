@@ -1,6 +1,7 @@
 package algo
 
 import (
+	"container/heap"
 	"fmt"
 	"math"
 
@@ -19,36 +20,6 @@ type node struct {
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
-	//used := make(map[int]bool)
-	//
-	//for _, snake := range r.Snakes {
-	//	if snake.Status == snakeStatusDead {
-	//		continue
-	//	}
-	//	var (
-	//		direction []int
-	//		minDist   = math.MaxInt32
-	//		minInd    int
-	//	)
-	//
-	//	for i, food := range r.Food {
-	//		dist := getManhattanDistance(snake.Geometry[0], food.C)
-	//		if dist < minDist && !used[i] {
-	//			minDist = dist
-	//			minInd = i
-	//			direction = getDirection(snake.Geometry[0], food.C)
-	//		}
-	//	}
-	//
-	//	used[minInd] = true
-	//
-	//	obj.Snakes = append(obj.Snakes, entity.Snake{
-	//		Id:        snake.Id,
-	//		Direction: direction,
-	//	})
-	//}
-
-	//return obj
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
@@ -65,6 +36,13 @@ func bfs(r entity.Response) (obj entity.Payload) {
 	for _, enemy := range r.Enemies {
 		for _, coord := range enemy.Geometry {
 			key := [3]int{coord[0], coord[1], coord[2]}
+			obst[key] = true
+		}
+	}
+
+	for _, snake := range r.Snakes {
+		for _, geo := range snake.Geometry {
+			key := [3]int{geo[0], geo[1], geo[2]}
 			obst[key] = true
 		}
 	}
@@ -106,6 +84,13 @@ func bfs(r entity.Response) (obj entity.Payload) {
 	return obj
 }
 
+type info struct {
+	point []int
+	steps []int
+	cost  int
+	heur  int
+}
+
 func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]int]bool) []int {
 	dirs := [6][]int{
 		{1, 0, 0},
@@ -116,33 +101,20 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 		{0, 0, -1},
 	}
 
-	type info struct {
-		point []int
-		steps []int
-		cost  int
-		heur  int
-	}
-
 	step := make(map[[3]int]info)
 
-	q := []info{
-		{
-			point: currPoint,
-			cost:  0,
-			heur:  heuristic(currPoint, target),
-		},
-	}
+	q := &PQ{}
+	heap.Init(q)
 
-	for len(q) > 0 {
-		// Find the node with the smallest f = cost + heuristic
-		idx := 0
-		for i := 1; i < len(q); i++ {
-			if q[i].cost+q[i].heur < q[idx].cost+q[idx].heur {
-				idx = i
-			}
-		}
-		curr := q[idx]
-		q = append(q[:idx], q[idx+1:]...)
+	heap.Push(q, info{
+		point: currPoint,
+		cost:  0,
+		heur:  heuristic(currPoint, target),
+	})
+
+	for q.Len() > 0 {
+
+		curr := heap.Pop(q).(info)
 
 		cp := curr.point
 		if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
@@ -179,7 +151,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 					heur:  heur,
 				}
 
-				q = append(q, info{
+				heap.Push(q, info{
 					point: []int{xx, yy, zz},
 					steps: steps,
 					cost:  newCost,

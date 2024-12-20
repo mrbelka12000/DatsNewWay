@@ -31,7 +31,7 @@ func main() {
 }
 
 func start(ctx context.Context, cl *client.Client) error {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(900 * time.Millisecond)
 	defer ticker.Stop()
 
 	var (
