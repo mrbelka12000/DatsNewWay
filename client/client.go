@@ -73,7 +73,7 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 	}
 
 	go func() {
-		fileName := fmt.Sprintf("check.json")
+		fileName := fmt.Sprintf("plot.json")
 		file, err := os.Create(fileName)
 		if err != nil {
 			fmt.Println(err, "create file")
