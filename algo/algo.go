@@ -1,8 +1,6 @@
 package algo
 
 import (
-	"fmt"
-
 	"DatsNewWay/entity"
 )
 
@@ -75,9 +73,10 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
+	used := make(map[[3]int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusAlive {
-			dir := runner(r, snake.Geometry[0], obst, food)
+			dir := runner(r, snake.Geometry[0], obst, food, used)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
@@ -88,7 +87,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 	return obj
 }
 
-func runner(r entity.Response, currPoint []int, obst, food map[[3]int]bool) []int {
+func runner(r entity.Response, currPoint []int, obst, food, used map[[3]int]bool) []int {
 	dirs := [6][]int{
 		{1, 0, 0},
 		{-1, 0, 0},
@@ -118,8 +117,8 @@ func runner(r entity.Response, currPoint []int, obst, food map[[3]int]bool) []in
 
 		cp := curr.point
 
-		if food[[3]int{cp[0], cp[1], cp[2]}] {
-			fmt.Println(curr.steps, cp[0], cp[1], cp[2])
+		if food[[3]int{cp[0], cp[1], cp[2]}] && !used[[3]int{cp[0], cp[1], cp[2]}] {
+			used[[3]int{cp[0], cp[1], cp[2]}] = true
 			return curr.steps
 		}
 
@@ -134,8 +133,8 @@ func runner(r entity.Response, currPoint []int, obst, food map[[3]int]bool) []in
 				continue
 			}
 
-			val, ok := step[[3]int{xx, yy, zz}]
-			if !ok || val.cost > curr.cost {
+			_, ok := step[[3]int{xx, yy, zz}]
+			if !ok {
 				steps := dir
 				if len(curr.steps) != 0 {
 					steps = curr.steps
@@ -146,6 +145,12 @@ func runner(r entity.Response, currPoint []int, obst, food map[[3]int]bool) []in
 					steps: steps,
 					cost:  curr.cost + 1,
 				}
+
+				q = append(q, info{
+					point: []int{xx, yy, zz},
+					steps: steps,
+					cost:  curr.cost + 1,
+				})
 			}
 		}
 	}

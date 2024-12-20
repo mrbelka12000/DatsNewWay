@@ -29,6 +29,19 @@ func NewClient(token string) *Client {
 }
 
 func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Response, error) {
+	//fileData, err := os.ReadFile("check.json")
+	//if err != nil {
+	//	return entity.Response{}, err
+	//}
+	//
+	//obj := entity.Response{}
+	//err = json.Unmarshal(fileData, &obj)
+	//if err != nil {
+	//	return entity.Response{}, err
+	//}
+	//
+	//return obj, nil
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return entity.Response{}, err
