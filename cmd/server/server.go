@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"time"
 
 	"DatsNewWay/entity"
 )
@@ -24,8 +25,24 @@ func main() {
 	}
 
 	http.HandleFunc("/next", ServeNext)
+	go StartJob()
 	fmt.Println("Server started on :8080")
 	http.ListenAndServe(":8080", nil)
+}
+
+var (
+	totalPoints = 0
+	now         = time.Now()
+)
+
+func StartJob() {
+	ticker := time.NewTicker(10 * time.Second)
+
+	for {
+		<-ticker.C
+		fmt.Printf("total points: %v, time from start: %v\n", totalPoints, time.Since(now))
+		ticker.Reset(10 * time.Second)
+	}
 }
 
 func ServeNext(w http.ResponseWriter, r *http.Request) {
@@ -65,6 +82,7 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 				food := resp.Food[i]
 				if head[0] == food.C[0] && head[1] == food.C[1] && head[2] == food.C[2] {
 					foodID = i
+					totalPoints = food.Points
 					break
 				}
 			}
@@ -83,6 +101,7 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(body)
+
 }
 
 var resp entity.Response
