@@ -70,6 +70,7 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if foodID != -1 {
+				resp.Points += resp.Food[foodID].Points
 				resp.Food = slices.Delete(resp.Food, foodID, foodID+1)
 			}
 		}

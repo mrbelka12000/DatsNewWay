@@ -51,12 +51,14 @@ def load_and_extract_data(filepath):
         fence_y.append(coord[1])
         fence_z.append(coord[2])
 
+    points =  data['points']
     return {
         'snake': (snake_x, snake_y, snake_z),
         'enemy': (enemy_x, enemy_y, enemy_z),
         'food': (food_x, food_y, food_z),
         'special': (special_x, special_y, special_z),
-        'fence': (fence_x, fence_y, fence_z)
+        'fence': (fence_x, fence_y, fence_z),
+        'points': points
     }
 
 # Step 2: Initialize the 3D plot
@@ -87,8 +89,8 @@ def update(frame):
     ax.set_xlabel('X Axis')
     ax.set_ylabel('Y Axis')
     ax.set_zlabel('Z Axis (Type)')
-
-    plt.title('3D Visualization of Snake Game Data')
+    points = data['points']
+    plt.title(f"3D Visualization of Points - {points} points")
     ax.legend()
 
 # Step 4: Set up the animation
