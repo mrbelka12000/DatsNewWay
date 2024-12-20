@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"fmt"
 	"math"
+	"sort"
 
 	"DatsNewWay/entity"
 )
@@ -54,6 +55,10 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
+	sort.Slice(r.Food, func(i, j int) bool {
+		return r.Food[i].Points > r.Food[j].Points
+	})
+
 	used := make(map[[3]int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
@@ -66,6 +71,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		)
 
 		for i, f := range r.Food {
+			if f.Points < 0 {
+				break
+			}
 			dist := getManhattanDistance(snake.Geometry[0], f.C)
 			if dist < minDist {
 				minDist = dist
@@ -118,7 +126,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 
 		cp := curr.point
 		if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
-			fmt.Println("Target reached:", cp, curr.steps)
+			fmt.Println("Target reached:", currPoint, curr.steps)
 			return curr.steps
 		}
 

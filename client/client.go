@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"time"
 
 	"DatsNewWay/entity"
 )
@@ -69,6 +71,20 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 	if err != nil {
 		return entity.Response{}, err
 	}
+
+	go func() {
+		file, err := os.Create(fmt.Sprintf("check/%v_%v.json", time.Now().Minute(), time.Now().Unix()))
+		if err != nil {
+			fmt.Println(err, "create file")
+			return
+		}
+		defer file.Close()
+
+		_, err = file.Write(bytes)
+		if err != nil {
+			fmt.Println(err, "write file")
+		}
+	}()
 
 	result := entity.Response{}
 
