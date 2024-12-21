@@ -68,10 +68,17 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 
 		for i := 0; i < len(resp.Snakes); i++ {
 			if resp.Snakes[i].Id == snake.Id {
-				resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
-				resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
-				resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
-				resp.Snakes[i].OldDirection = snake.Direction
+
+				if len(snake.Direction) > 0 {
+					resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
+					resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
+					resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
+					resp.Snakes[i].OldDirection = snake.Direction
+				} else {
+					resp.Snakes[i].Geometry[0][0] += resp.Snakes[i].OldDirection[0]
+					resp.Snakes[i].Geometry[0][1] += resp.Snakes[i].OldDirection[1]
+					resp.Snakes[i].Geometry[0][2] += resp.Snakes[i].OldDirection[2]
+				}
 			}
 
 			ss := resp.Snakes[i]
@@ -103,14 +110,6 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if foodID != -1 {
-				geom := resp.Snakes[i].Geometry
-				oldDir := resp.Snakes[i].OldDirection
-				resp.Snakes[i].Geometry = append(
-					[][]int{
-						{geom[0][0] + oldDir[0], geom[0][1] + oldDir[1], geom[0][2] + oldDir[2]},
-					},
-					resp.Snakes[i].Geometry...,
-				)
 				resp.Points += resp.Food[foodID].Points
 				resp.Food = slices.Delete(resp.Food, foodID, foodID+1)
 			}

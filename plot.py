@@ -3,13 +3,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.animation as animation
 
-# Step 1: Function to load and extract data from JSON
+
+# Function to load and extract data from JSON
 def load_and_extract_data(filepath):
     with open(filepath, 'r') as file:
         data = json.load(file)
 
-    # Extract data for visualization
-    # Snake geometries
     snake_x, snake_y, snake_z = [], [], []
     for snake in data['snakes']:
         for coord in snake['geometry']:
@@ -17,7 +16,6 @@ def load_and_extract_data(filepath):
             snake_y.append(coord[1])
             snake_z.append(coord[2])
 
-    # Enemy geometries
     enemy_x, enemy_y, enemy_z = [], [], []
     for enemy in data['enemies']:
         for coord in enemy['geometry']:
@@ -25,14 +23,12 @@ def load_and_extract_data(filepath):
             enemy_y.append(coord[1])
             enemy_z.append(coord[2])
 
-    # Food points
     food_x, food_y, food_z = [], [], []
     for food in data['food']:
         food_x.append(food['c'][0])
         food_y.append(food['c'][1])
         food_z.append(food['c'][2])
 
-    # Special food points (Golden and Suspicious)
     special_x, special_y, special_z = [], [], []
     for coord in data['specialFood']['golden']:
         special_x.append(coord[0])
@@ -44,7 +40,6 @@ def load_and_extract_data(filepath):
         special_y.append(coord[1])
         special_z.append(coord[2])
 
-    # Fence coordinates (from `fences`)
     fence_x, fence_y, fence_z = [], [], []
     for coord in data['fences']:
         fence_x.append(coord[0])
@@ -61,20 +56,16 @@ def load_and_extract_data(filepath):
         'points': points
     }
 
-# Step 2: Initialize the 3D plot
+# Initialize the 3D plot
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-# Step 3: Function to update the plot in real-time
+# Function to update the plot in real-time
 def update(frame):
-    # Clear the previous plot
     ax.clear()
-
-    # Load the data from the file
     filepath = 'plot.json'
     data = load_and_extract_data(filepath)
 
-    # Plot each type of entity
     snake_x, snake_y, snake_z = data['snake']
     enemy_x, enemy_y, enemy_z = data['enemy']
     food_x, food_y, food_z = data['food']
@@ -87,16 +78,16 @@ def update(frame):
     ax.scatter(fence_x, fence_y, fence_z, c='black', marker='d', label='Fences')
     ax.scatter(enemy_x, enemy_y, enemy_z, c='red', marker='^', label='Enemy')
 
-    # Customize the plot
     ax.set_xlabel('X Axis')
     ax.set_ylabel('Y Axis')
-    ax.set_zlabel('Z Axis (Type)')
+    ax.set_zlabel('Z Axis')
     points = data['points']
     plt.title(f"3D Visualization of Points - {points} points")
     ax.legend()
 
-# Step 4: Set up the animation
-ani = animation.FuncAnimation(fig, update, interval=1000)  # Update every 1000ms (1 second)
+# Assign the animation to a variable
+ani = animation.FuncAnimation(fig, update, interval=1000)
 
-# Step 5: Display the plot with interactivity
+# Display the plot
 plt.show()
+
