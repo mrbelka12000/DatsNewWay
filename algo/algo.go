@@ -22,6 +22,14 @@ const (
 )
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
+	for _, food := range r.Food {
+		segmentPriority(food.C, r.MapSize[0], r.MapSize[1], r.MapSize[2], "FOOD")
+	}
+
+	for _, snake := range r.Enemies {
+		segmentPriority(snake.Geometry[0], r.MapSize[0], r.MapSize[1], r.MapSize[2], "SNAKE")
+	}
+
 	return bfs(r)
 }
 
@@ -263,6 +271,55 @@ func isCentralized(head []int, x, y, z int) bool {
 	return centreX-quadX < head[0] && centreX+quadX > head[0] &&
 		centreY-quadY < head[1] && centreY+quadY > head[1] &&
 		centreZ-quadZ < head[2] && centreZ+quadZ > head[2]
+}
+
+var (
+	segmentFoodInfo  = make(map[int]int)
+	segmentSnakeInfo = make(map[int]int)
+)
+
+func segmentPriority(point []int, x, y, z int, t string) int {
+	segmentId := 0
+
+	if isCentralized(point, x-x/2, y-y/2, z-z/2) {
+		segmentId = 1
+	}
+
+	if isCentralized(point, x-x/2, y-y/2, z+z/2) {
+		segmentId = 2
+	}
+
+	if isCentralized(point, x-x/2, y+y/2, z-z/2) {
+		segmentId = 3
+	}
+
+	if isCentralized(point, x-x/2, y+y/2, z+z/2) {
+		segmentId = 4
+	}
+
+	if isCentralized(point, x+x/2, y-y/2, z-z/2) {
+		segmentId = 5
+	}
+
+	if isCentralized(point, x+x/2, y-y/2, z+z/2) {
+		segmentId = 6
+	}
+
+	if isCentralized(point, x+x/2, y+y/2, z-z/2) {
+		segmentId = 7
+	}
+
+	if isCentralized(point, x+x/2, y+y/2, z+z/2) {
+		segmentId = 8
+	}
+
+	if t == "SNAKE" {
+		segmentSnakeInfo[segmentId]++
+	} else if t == "FOOD" {
+		segmentFoodInfo[segmentId]++
+	}
+
+	return segmentId
 }
 
 func getPreviousPoint(snake entity.Snake) []int {
