@@ -1,35 +1,44 @@
 package algo
 
-import "testing"
+import (
+	"fmt"
+	"testing"
 
-func TestIsCentrilized(t *testing.T) {
+	"DatsNewWay/entity"
+)
 
-	cases := []struct {
-		name string
+func TestRunnerAStar(t *testing.T) {
 
-		head []int
-		x    int
-		y    int
-		z    int
-
-		want bool
-	}{
-		{
-			name: "in centre",
-			head: []int{90, 90, 30},
-			x:    180,
-			y:    180,
-			z:    60,
-			want: true,
+	response := entity.Response{
+		MapSize: []int{120, 120, 120},
+		Fences: [][]int{
+			{1, 1, 1},
+			{0, 1, 1},
+			{0, 2, 1},
+		},
+		Snakes: []entity.Snake{
+			{
+				Id: "test",
+				Geometry: [][]int{
+					{0, 0, 0},
+				},
+				Status: snakeStatusAlive,
+			},
+		},
+		Food: []entity.Food{
+			{
+				C: []int{
+					3, 3, 3,
+				},
+			},
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := isCentralized(tc.head, tc.x, tc.y, tc.z)
-			if got != tc.want {
-				t.Errorf("got %v, want %v", got, tc.want)
-			}
-		})
+	obst := make(map[[3]int]bool)
+	for _, v := range response.Fences {
+		obst[[3]int{v[0], v[1], v[2]}] = true
 	}
+
+	dir := runnerAStar(response, []int{0, 0, 0}, []int{4, 4, 4}, obst)
+	fmt.Println(dir)
 }

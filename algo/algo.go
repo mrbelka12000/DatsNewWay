@@ -54,7 +54,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		return r.Food[i].Points > r.Food[j].Points
 	})
 
-	used := make(map[[3]int]bool)
+	used := make(map[int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
 			continue
@@ -67,6 +67,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		)
 
 		for i, f := range r.Food {
+			if used[i] {
+				continue
+			}
 			if f.Points < 0 {
 				break
 			}
@@ -79,8 +82,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			}
 		}
 
+		used[minInd] = true
 		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && minDist > 5 {
-			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst, used)
+			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
@@ -90,7 +94,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 		fmt.Println(head, " in centre")
 
-		dir := runnerAStar(r, head, r.Food[minInd].C, obst, used)
+		dir := runnerAStar(r, head, r.Food[minInd].C, obst)
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
@@ -107,7 +111,7 @@ type info struct {
 	heur  int
 }
 
-func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]int]bool) []int {
+func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]bool) []int {
 	dirs := [6][]int{
 		{1, 0, 0},
 		{-1, 0, 0},
