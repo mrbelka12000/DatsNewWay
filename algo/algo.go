@@ -178,6 +178,10 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 	// fill obstacles with fences
 	for _, fence := range r.Fences {
+		for _, dir := range dirs {
+			key := [3]int{fence[0] + dir[0], fence[1] + dir[1], fence[2] + dir[2]}
+			obst[key] = true
+		}
 		key := [3]int{fence[0], fence[1], fence[2]}
 		obst[key] = true
 	}
