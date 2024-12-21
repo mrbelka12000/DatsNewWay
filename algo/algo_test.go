@@ -39,6 +39,16 @@ func TestRunnerAStar(t *testing.T) {
 		obst[[3]int{v[0], v[1], v[2]}] = true
 	}
 
-	dir := runnerAStar(response, []int{0, 0, 0}, []int{4, 4, 4}, obst)
+	dir := runnerAStar(response, []int{2, 2, 2}, []int{3, 2, 2}, []int{1, 2, 2}, obst)
 	fmt.Println(dir)
+}
+
+func TestGetProfit(t *testing.T) {
+
+	food := entity.Food{
+		C:      []int{1, 3, 2},
+		Points: 100,
+	}
+
+	fmt.Println(calculateProfit([]int{0, 0, 0}, food, false))
 }

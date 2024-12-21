@@ -7,6 +7,15 @@ import (
 	"DatsNewWay/entity"
 )
 
+var dirs = [6][3]int{
+	{1, 0, 0},
+	{-1, 0, 0},
+	{0, 1, 0},
+	{0, -1, 0},
+	{0, 0, 1},
+	{0, 0, -1},
+}
+
 const (
 	snakeStatusAlive = "alive"
 	snakeStatusDead  = "dead"
@@ -16,15 +25,21 @@ func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
 }
 
-func calculateProfit(head []int, food entity.Food) float64 {
+func calculateProfit(head []int, food entity.Food, isGolden bool) float64 {
 	dist := getManhattanDistance(head, food.C)
 
-	return float64(food.Points)/float64(dist) + 1
+	profit := float64(food.Points) / (float64(dist) + 1)
+
+	if isGolden {
+		profit *= 10
+	}
+
+	return profit
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
 
-	obst := make(map[[3]int]bool)
+	obst := make(map[[3]int]bool, len(r.Fences)+len(r.Enemies))
 
 	// fill obstacles with fences
 	for _, fence := range r.Fences {
@@ -34,7 +49,21 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 	// fill obstacles with enemies
 	for _, enemy := range r.Enemies {
-		for _, coord := range enemy.Geometry {
+		for i, coord := range enemy.Geometry {
+			if i == 0 {
+				// handle + 2 cell after enemies head
+				for _, dir := range dirs {
+					key := [3]int{coord[0] + dir[0], coord[1] + dir[1], coord[2] + dir[2]}
+					obst[key] = true
+					for _, dd := range dirs {
+						key[0] += dd[0]
+						key[1] += dd[1]
+						key[2] += dd[2]
+						obst[key] = true
+					}
+				}
+			}
+
 			key := [3]int{coord[0], coord[1], coord[2]}
 			obst[key] = true
 		}
@@ -47,14 +76,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 	}
 
-	food := make(map[[3]int]bool)
-	// fill food hash table
-	for _, f := range r.Food {
-		key := [3]int{f.C[0], f.C[1], f.C[2]}
-		food[key] = true
-	}
-
-	used := make(map[int]bool)
+	usedIDs := make(map[int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
 			continue
@@ -63,37 +85,53 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		var (
 			maxProfit float64
 			maxInd    int
+			sum       int
 			head      = snake.Geometry[0]
 		)
 
 		for i, f := range r.Food {
-			if used[i] {
+			if usedIDs[i] {
 				continue
 			}
 			if f.Points < 0 {
 				continue
 			}
 
-			profit := calculateProfit(head, f)
+			profit := calculateProfit(head, f, false)
 			if profit > maxProfit {
 				maxProfit = profit
 				maxInd = i
 			}
+			sum += f.Points
 		}
 
-		used[maxInd] = true
+		//for i, coord := range r.SpecialFood.Golden {
+		//	if usedIDs[i] {
+		//		continue
+		//	}
+		//
+		//	profit := calculateProfit(head, entity.Food{
+		//		C:      coord,
+		//		Points: sum / len(r.Food),
+		//	}, true)
+		//	if profit > maxProfit {
+		//		maxProfit = profit
+		//		fmt.Println(maxProfit)
+		//		maxInd = i
+		//	}
+		//}
+
+		usedIDs[maxInd] = true
 		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
-			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
+			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, getPreviousPoint(snake), obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
 			})
-			fmt.Println(head, " not in centre")
 			continue
 		}
-		fmt.Println(head, " in centre")
 
-		dir := runnerAStar(r, head, r.Food[maxInd].C, obst)
+		dir := runnerAStar(r, head, r.Food[maxInd].C, getPreviousPoint(snake), obst)
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
@@ -110,16 +148,8 @@ type info struct {
 	heur  int
 }
 
-func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]bool) []int {
-	dirs := [6][]int{
-		{1, 0, 0},
-		{-1, 0, 0},
-		{0, 1, 0},
-		{0, -1, 0},
-		{0, 0, 1},
-		{0, 0, -1},
-	}
-
+func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map[[3]int]bool) []int {
+	prevDir := getOpositeDir([3]int{currPoint[0] - prevPoint[0], currPoint[1] - prevPoint[1], currPoint[2] - prevPoint[2]})
 	step := make(map[[3]int]info)
 
 	q := &PQ{}
@@ -147,21 +177,24 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]boo
 			// If the target is reached, return the path
 			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
 				if len(curr.path) > 0 {
-					fmt.Println("Target reached:", target, cp, curr.path[0])
+					fmt.Println(curr.path)
 					return curr.path[0]
 				}
 				continue
 			}
 
 			for _, dir := range dirs {
+				if dir == prevDir {
+					continue
+				}
 				xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
 				// Check boundaries
-				if xx < 0 || xx > r.MapSize[0] || yy < 0 || yy > r.MapSize[1] || zz < 0 || zz > r.MapSize[2] {
+				if xx < 0 || xx >= r.MapSize[0] || yy < 0 || yy >= r.MapSize[1] || zz < 0 || zz >= r.MapSize[2] {
 					continue
 				}
 
-				// Check for obstacles and already visited points
+				// Check for obstacles
 				if obst[[3]int{xx, yy, zz}] {
 					continue
 				}
@@ -174,7 +207,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]boo
 					// Create a copy of the current path and add the new point
 					newPath := make([][]int, len(curr.path))
 					copy(newPath, curr.path)
-					newPath = append(newPath, dir)
+					newPath = append(newPath, dir[:])
 
 					step[[3]int{xx, yy, zz}] = info{
 						point: []int{xx, yy, zz},
@@ -192,6 +225,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]boo
 				}
 			}
 		}
+		prevDir = [3]int{}
 		deep++
 	}
 
@@ -204,31 +238,6 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]boo
 
 func heuristic(currPoint []int, target []int) int {
 	return abs(currPoint[0]-target[0]) + abs(currPoint[1]-target[1]) + abs(currPoint[2]-target[2])
-}
-
-func getDirection(head, target []int) []int {
-	if head[0] != target[0] {
-		if head[0] < target[0] {
-			return []int{1, 0, 0}
-		}
-		return []int{-1, 0, 0}
-	}
-
-	if head[1] != target[1] {
-		if head[1] < target[1] {
-			return []int{0, 1, 0}
-		}
-		return []int{0, -1, 0}
-	}
-
-	if head[2] != target[2] {
-		if head[2] < target[2] {
-			return []int{0, 0, 1}
-		}
-		return []int{0, 0, -1}
-	}
-
-	return []int{0, 0, 0} // Return this if head equals target
 }
 
 func getManhattanDistance(x, y []int) int {
@@ -255,6 +264,32 @@ func isCentralized(head []int, x, y, z int) bool {
 	return centreX-quadX < head[0] && centreX+quadX > head[0] &&
 		centreY-quadY < head[1] && centreY+quadY > head[1] &&
 		centreZ-quadZ < head[2] && centreZ+quadZ > head[2]
+}
+
+func getPreviousPoint(snake entity.Snake) []int {
+	if len(snake.Geometry) == 1 {
+		return snake.Geometry[0]
+	}
+	return snake.Geometry[1]
+}
+
+func getOpositeDir(dir [3]int) [3]int {
+	switch dir {
+	case [3]int{1, 0, 0}:
+		return [3]int{-1, 0, 0}
+	case [3]int{-1, 0, 0}:
+		return [3]int{1, 0, 0}
+	case [3]int{0, 1, 0}:
+		return [3]int{0, -1, 0}
+	case [3]int{0, -1, 0}:
+		return [3]int{0, 1, 0}
+	case [3]int{0, 0, -1}:
+		return [3]int{0, 0, 1}
+	case [3]int{0, 0, 1}:
+		return [3]int{0, 0, -1}
+	}
+
+	return [3]int{0, 0, 0}
 }
 
 /*

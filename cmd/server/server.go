@@ -42,6 +42,13 @@ func StartJob() {
 	for {
 		<-ticker.C
 		fmt.Printf("total points: %v, time from start: %v\n", totalPoints, time.Since(now))
+
+		for i := 0; i < 3; i++ {
+			resp.Food = append(resp.Food, entity.Food{
+				C:      []int{rand.Intn(180), rand.Intn(180), rand.Intn(60)},
+				Points: rand.Intn(200),
+			})
+		}
 		ticker.Reset(10 * time.Second)
 	}
 }
@@ -123,7 +130,6 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Write(body)
-
 }
 
 var resp entity.Response

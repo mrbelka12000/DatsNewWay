@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -49,6 +50,7 @@ func start(ctx context.Context, cl *client.Client) error {
 		select {
 		case <-ticker.C:
 
+			start := time.Now()
 			payload := algo.GetNextDirection(resp)
 
 			resp, err = cl.Get(ctx, payload)
@@ -57,7 +59,7 @@ func start(ctx context.Context, cl *client.Client) error {
 				continue
 			}
 
-			log.Info().Msg("successfully send data")
+			log.Info().Msg(fmt.Sprintf("successfully send data, spent: %v", time.Since(start).Seconds()))
 		case <-ctx.Done():
 			return ctx.Err()
 		}
