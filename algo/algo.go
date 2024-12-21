@@ -93,7 +93,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
-	used := make(map[[3]int]bool)
+	used := make(map[int]bool)
 	for idx, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
 			continue
@@ -106,6 +106,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		)
 
 		for i, f := range r.Food {
+			if used[i] {
+				continue
+			}
 			if f.Points < 0 {
 				continue
 			}
@@ -135,6 +138,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			minInd = 0
 		}
 
+		used[minInd] = true
 		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
 		//dir := runner(r, snake.Geometry[0], obst, food, used)
 		if _, ok := mapping[[3]int{snake.Geometry[0][0], snake.Geometry[0][1], snake.Geometry[0][2]}]; !ok {
@@ -159,7 +163,7 @@ type info struct {
 	heur  int
 }
 
-func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]int]bool) []int {
+func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]bool) []int {
 	dirs := [6][]int{
 		{1, 0, 0},
 		{-1, 0, 0},
@@ -195,8 +199,6 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 			continue
 		}
 
-		used[[3]int{cp[0], cp[1], cp[2]}] = true
-
 		for _, dir := range dirs {
 			xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
@@ -206,7 +208,7 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst, used map[[3]i
 			}
 
 			// Check for obstacles and already visited points
-			if obst[[3]int{xx, yy, zz}] || used[[3]int{xx, yy, zz}] {
+			if obst[[3]int{xx, yy, zz}] {
 				continue
 			}
 

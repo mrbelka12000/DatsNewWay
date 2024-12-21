@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"slices"
@@ -59,28 +60,49 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i := 0; i < len(resp.Enemies); i++ {
+		resp.Enemies[i].Geometry = append(getRandomDir(resp.Enemies[i].Geometry[0]), resp.Enemies[i].Geometry...)
+	}
+
 	for _, snake := range req.Snakes {
 
 		for i := 0; i < len(resp.Snakes); i++ {
-			if resp.Snakes[i].Id == snake.Id && len(snake.Direction) > 0 {
-				resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
-				resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
-				resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
+			if resp.Snakes[i].Id == snake.Id {
+
+				if len(snake.Direction) > 0 {
+					resp.Snakes[i].Geometry[0][0] += snake.Direction[0]
+					resp.Snakes[i].Geometry[0][1] += snake.Direction[1]
+					resp.Snakes[i].Geometry[0][2] += snake.Direction[2]
+					resp.Snakes[i].OldDirection = snake.Direction
+				} else {
+					resp.Snakes[i].Geometry[0][0] += resp.Snakes[i].OldDirection[0]
+					resp.Snakes[i].Geometry[0][1] += resp.Snakes[i].OldDirection[1]
+					resp.Snakes[i].Geometry[0][2] += resp.Snakes[i].OldDirection[2]
+				}
 			}
 
 			ss := resp.Snakes[i]
 			head := ss.Geometry[0]
 			for _, fence := range resp.Fences {
-				if head[0] == fence[0] && head[1] == fence[1] && head[2] == fence[2] && head[3] == fence[2] {
+				if isInSameCells(head, fence) {
 					resp.Snakes[i].Status = "dead"
 					fmt.Println("suka")
+				}
+			}
+
+			for _, enemy := range resp.Enemies {
+				for _, geo := range enemy.Geometry {
+					if isInSameCells(head, geo) {
+						resp.Snakes[i].Status = "dead"
+						fmt.Println("suka умер от чужой змеи")
+					}
 				}
 			}
 
 			var foodID int = -1
 			for i := 0; i < len(resp.Food); i++ {
 				food := resp.Food[i]
-				if head[0] == food.C[0] && head[1] == food.C[1] && head[2] == food.C[2] {
+				if isInSameCells(head, food.C) {
 					foodID = i
 					totalPoints += food.Points
 					break
@@ -105,3 +127,21 @@ func ServeNext(w http.ResponseWriter, r *http.Request) {
 }
 
 var resp entity.Response
+
+func isInSameCells(x, y []int) bool {
+	return x[0] == y[0] && x[1] == y[1] && x[2] == y[2]
+}
+
+func getRandomDir(head []int) [][]int {
+	dirs := [6][]int{
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{0, 0, -1},
+	}
+
+	random := dirs[rand.Intn(len(dirs))]
+	return [][]int{{head[0] + random[0], head[1] + random[1], head[2] + random[2]}}
+}
