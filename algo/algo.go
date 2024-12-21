@@ -264,7 +264,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 		totalProfitCount++
 
-		if maxProfit < goldProfit && goldProfit > currentProfit {
+		if maxProfit < goldProfit && goldProfit > currentProfit*2 {
 			fmt.Println("went to gold")
 			usedGoldIDs[goldInd] = true
 			totalProfit += goldProfit
