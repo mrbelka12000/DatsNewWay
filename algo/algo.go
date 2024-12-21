@@ -3,8 +3,6 @@ package algo
 import (
 	"container/heap"
 	"fmt"
-	"math"
-	"sort"
 
 	"DatsNewWay/entity"
 )
@@ -16,6 +14,12 @@ const (
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
+}
+
+func calculateProfit(head []int, food entity.Food) float64 {
+	dist := getManhattanDistance(head, food.C)
+
+	return float64(food.Points)/float64(dist) + 1
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
@@ -50,10 +54,6 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
-	sort.Slice(r.Food, func(i, j int) bool {
-		return r.Food[i].Points > r.Food[j].Points
-	})
-
 	used := make(map[int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
@@ -61,8 +61,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		var (
-			minDist = math.MaxInt32
-			minInd  int
+			maxProfit float64
+			maxInd    int
+			head      = snake.Geometry[0]
 		)
 
 		for i, f := range r.Food {
@@ -70,17 +71,29 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				continue
 			}
 			if f.Points < 0 {
-				break
+				continue
 			}
-			dist := getManhattanDistance(snake.Geometry[0], f.C)
-			if dist < minDist {
-				minDist = dist
-				minInd = i
+
+			profit := calculateProfit(head, f)
+			if profit > maxProfit {
+				maxProfit = profit
+				maxInd = i
 			}
 		}
 
-		used[minInd] = true
-		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst)
+		used[maxInd] = true
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
+			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
+			fmt.Println(head, " not in centre")
+			continue
+		}
+		fmt.Println(head, " in centre")
+
+		dir := runnerAStar(r, head, r.Food[maxInd].C, obst)
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
@@ -119,61 +132,74 @@ func runnerAStar(r entity.Response, currPoint, target []int, obst map[[3]int]boo
 		cost:  0,
 		heur:  heuristic(currPoint, target),
 	})
+	var deep int
 
 	for q.Len() > 0 {
-		curr := heap.Pop(q).(info)
-		cp := curr.point
-
-		// If the target is reached, return the path
-		if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
-			fmt.Println("Target reached:", target, cp, curr.path)
-			if len(curr.path) > 0 {
-				return curr.path[0]
-			}
-			continue
+		if deep > 10 {
+			break
 		}
+		size := q.Len()
 
-		for _, dir := range dirs {
-			xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
+		for i := 0; i < size; i++ {
+			curr := heap.Pop(q).(info)
+			cp := curr.point
 
-			// Check boundaries
-			if xx < 0 || xx > r.MapSize[0] || yy < 0 || yy > r.MapSize[1] || zz < 0 || zz > r.MapSize[2] {
+			// If the target is reached, return the path
+			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
+				if len(curr.path) > 0 {
+					fmt.Println("Target reached:", target, cp, curr.path[0])
+					return curr.path[0]
+				}
 				continue
 			}
 
-			// Check for obstacles and already visited points
-			if obst[[3]int{xx, yy, zz}] {
-				continue
-			}
+			for _, dir := range dirs {
+				xx, yy, zz := cp[0]+dir[0], cp[1]+dir[1], cp[2]+dir[2]
 
-			newCost := curr.cost + 1
-			heur := heuristic([]int{xx, yy, zz}, target)
-
-			// If a better path is found, update the step map and push the new state into the queue
-			if _, ok := step[[3]int{xx, yy, zz}]; !ok || newCost < step[[3]int{xx, yy, zz}].cost {
-				// Create a copy of the current path and add the new point
-				newPath := make([][]int, len(curr.path))
-				copy(newPath, curr.path)
-				newPath = append(newPath, dir)
-
-				step[[3]int{xx, yy, zz}] = info{
-					point: []int{xx, yy, zz},
-					path:  newPath,
-					cost:  newCost,
-					heur:  heur,
+				// Check boundaries
+				if xx < 0 || xx > r.MapSize[0] || yy < 0 || yy > r.MapSize[1] || zz < 0 || zz > r.MapSize[2] {
+					continue
 				}
 
-				heap.Push(q, info{
-					point: []int{xx, yy, zz},
-					path:  newPath,
-					cost:  newCost,
-					heur:  heur,
-				})
+				// Check for obstacles and already visited points
+				if obst[[3]int{xx, yy, zz}] {
+					continue
+				}
+
+				newCost := curr.cost + 1
+				heur := heuristic([]int{xx, yy, zz}, target)
+
+				// If a better path is found, update the step map and push the new state into the queue
+				if _, ok := step[[3]int{xx, yy, zz}]; !ok || newCost < step[[3]int{xx, yy, zz}].cost {
+					// Create a copy of the current path and add the new point
+					newPath := make([][]int, len(curr.path))
+					copy(newPath, curr.path)
+					newPath = append(newPath, dir)
+
+					step[[3]int{xx, yy, zz}] = info{
+						point: []int{xx, yy, zz},
+						path:  newPath,
+						cost:  newCost,
+						heur:  heur,
+					}
+
+					heap.Push(q, info{
+						point: []int{xx, yy, zz},
+						path:  newPath,
+						cost:  newCost,
+						heur:  heur,
+					})
+				}
 			}
 		}
+		deep++
 	}
 
-	return nil // No path found
+	if q.Len() == 0 {
+		return nil
+	}
+
+	return heap.Pop(q).(info).path[0] // No path found
 }
 
 func heuristic(currPoint []int, target []int) int {
@@ -215,3 +241,24 @@ func abs(a int) int {
 	}
 	return a
 }
+
+func isCentralized(head []int, x, y, z int) bool {
+	centreX := x / 2
+	centreY := y / 2
+	centreZ := z / 2
+
+	//dist := getManhattanDistance(head, []int{centreX, centreY, centreZ})
+
+	quadX := centreX / 2
+	quadY := centreY / 2
+	quadZ := centreZ / 2
+	return centreX-quadX < head[0] && centreX+quadX > head[0] &&
+		centreY-quadY < head[1] && centreY+quadY > head[1] &&
+		centreZ-quadZ < head[2] && centreZ+quadZ > head[2]
+}
+
+/*
+180 / 6 = 30
+180 / 6 = 30
+90 / 6 = 15
+*/
