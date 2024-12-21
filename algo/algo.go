@@ -139,7 +139,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		used[minInd] = true
-		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
+		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst)
 		//dir := runner(r, snake.Geometry[0], obst, food, used)
 		if _, ok := mapping[[3]int{snake.Geometry[0][0], snake.Geometry[0][1], snake.Geometry[0][2]}]; !ok {
 			mapping[[3]int{snake.Geometry[0][0], snake.Geometry[0][1], snake.Geometry[0][2]}] = true
