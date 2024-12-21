@@ -260,6 +260,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			)
 
 			for i, gold := range r.SpecialFood.Golden {
+				if usedIDs[i] {
+					continue
+				}
 				profit := calculateProfit(head, entity.Food{
 					C:      gold,
 					Points: totalFoodPoints / len(r.Food),
