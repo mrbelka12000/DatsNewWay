@@ -68,6 +68,9 @@ func segmentFoodPriority(food *entity.Food, x, y, z int) {
 }
 
 func prepareSegmentPriority(r entity.Response) {
+	totalCount := 0
+	snakeCount := 0
+	goldenCount := 0
 
 	for _, food := range r.Food {
 		segmentFoodPriority(&food, r.MapSize[0], r.MapSize[1], r.MapSize[2])
@@ -81,6 +84,16 @@ func prepareSegmentPriority(r entity.Response) {
 	for _, goldenFood := range r.SpecialFood.Golden {
 		segmentGoldenFoodPriority(goldenFood, r.MapSize[0], r.MapSize[1], r.MapSize[2])
 	}
+
+	for _, segment := range segmentInfo {
+		totalCount += segment.TotalFoodPoints
+		snakeCount += segment.CountSnakes
+		goldenCount += segment.CountGoldenFood
+	}
+
+	fmt.Println("total count", totalCount)
+	fmt.Println("snake count", snakeCount)
+	fmt.Println("golden count", goldenCount)
 
 	foodTotalPoints = 0
 }
