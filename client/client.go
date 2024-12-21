@@ -49,7 +49,7 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 		return entity.Response{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, localDomain, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, testDomain, bytes.NewReader(body))
 	if err != nil {
 		return entity.Response{}, err
 	}

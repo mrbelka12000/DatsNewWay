@@ -8,14 +8,19 @@ import (
 	"DatsNewWay/entity"
 )
 
-var dirs = [6][3]int{
-	{1, 0, 0},
-	{-1, 0, 0},
-	{0, 1, 0},
-	{0, -1, 0},
-	{0, 0, 1},
-	{0, 0, -1},
-}
+var (
+	dirs = [6][3]int{
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{0, 0, -1},
+	}
+
+	segmentFoodInfo  = make(map[int]int)
+	segmentSnakeInfo = make(map[int]int)
+)
 
 const (
 	snakeStatusAlive = "alive"
@@ -34,20 +39,31 @@ func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
 }
 
-func calculateProfit(head []int, food entity.Food, isGolden bool) float64 {
+func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float64 {
 	dist := getManhattanDistance(head, food.C)
 
-	profit := float64(food.Points) / (float64(dist) + 10)
+	switch {
+	case ind == 0:
+		return 0
 
-	if isGolden {
-		profit *= 10
+	case ind == 1:
+
+		return 0
+	case ind == 2:
+		return 0
+	default:
+
+		profit := float64(food.Points) / (dist + 10)
+
+		if isGolden {
+			profit *= 10
+		}
+
+		return profit
 	}
-
-	return profit
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
-
 	obst := make(map[[3]int]bool, len(r.Fences)+len(r.Enemies))
 
 	// fill obstacles with fences
@@ -96,7 +112,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			maxInd    int
 			sum       int
 			head      = snake.Geometry[0]
-			minDist   = math.MaxInt32
+			minDist   = math.MaxFloat32
 			minInd    int
 		)
 
@@ -108,7 +124,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				continue
 			}
 
-			profit := calculateProfit(head, f, false)
+			profit := calculateProfit(head, f, false, 10)
 			if profit > maxProfit {
 				maxProfit = profit
 				maxInd = i
@@ -131,7 +147,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				Id:        snake.Id,
 				Direction: dir,
 			})
-		} else if maxProfit > 6 {
+		} else if maxProfit > 4 {
 			// run for profitable mandarin
 			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
@@ -250,8 +266,8 @@ func heuristic(currPoint []int, target []int) int {
 	return abs(currPoint[0]-target[0]) + abs(currPoint[1]-target[1]) + abs(currPoint[2]-target[2])
 }
 
-func getManhattanDistance(x, y []int) int {
-	return abs(x[0]-y[0]) + abs(x[1]-y[1]) + abs(x[2]-y[2])
+func getManhattanDistance(x, y []int) float64 {
+	return math.Sqrt(math.Pow(float64(x[0]-y[0]), 2) + math.Pow(float64(x[1]-y[1]), 2) + math.Pow(float64(x[2]-y[2]), 2))
 }
 
 func abs(a int) int {
@@ -275,11 +291,6 @@ func isCentralized(head []int, x, y, z int) bool {
 		centreY-quadY < head[1] && centreY+quadY > head[1] &&
 		centreZ-quadZ < head[2] && centreZ+quadZ > head[2]
 }
-
-var (
-	segmentFoodInfo  = make(map[int]int)
-	segmentSnakeInfo = make(map[int]int)
-)
 
 func segmentPriority(point []int, x, y, z int, t string) int {
 	segmentId := 0
