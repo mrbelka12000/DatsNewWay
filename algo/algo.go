@@ -71,11 +71,22 @@ func prepareSegmentPriority(r entity.Response) {
 	totalCount := 0
 	snakeCount := 0
 	goldenCount := 0
+	segmentInfo = map[int]*SegmentInfo{
+		0: &SegmentInfo{},
+		1: &SegmentInfo{},
+		2: &SegmentInfo{},
+		3: &SegmentInfo{},
+		4: &SegmentInfo{},
+		5: &SegmentInfo{},
+		6: &SegmentInfo{},
+		7: &SegmentInfo{},
+		8: &SegmentInfo{},
+	}
 
 	for _, food := range r.Food {
 		segmentFoodPriority(&food, r.MapSize[0], r.MapSize[1], r.MapSize[2])
 	}
-	avgTotal = foodTotalPoints / len(r.Food)
+	avgTotal = foodTotalPoints / (len(r.Food) + 1)
 
 	for _, snake := range r.Enemies {
 		segmentSnakePriority(snake.Geometry[0], r.MapSize[0], r.MapSize[1], r.MapSize[2])
@@ -97,6 +108,7 @@ func prepareSegmentPriority(r entity.Response) {
 
 	foodTotalPoints = 0
 }
+
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	prepareSegmentPriority(r)
 	orderX = r.MapSize[0]
@@ -117,19 +129,14 @@ func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float
 
 	// Calculate FoodFactor
 
-	foodFactor := 1.0 + float64(sInfo.CountGoldenFood)/float64(sInfo.CountFood)
-	return float64(sInfo.TotalFoodPoints) * foodFactor / (float64(sInfo.CountSnakes) + 1) / (float64(dist) + 1)
-
 	switch {
 	case ind%5 == 0:
-		return 0
+		return 0.7*float64(sInfo.TotalFoodPoints) + 0.9*float64(sInfo.CountGoldenFood) - 1*float64(sInfo.CountSnakes) - 0.8*(dist)
 	case ind%5 == 1:
-		//sInfo.TotalFoodPoints / sInfo.CountSnakes
-		return 0
-	case ind%5 == 2:
-		return 0
-	default:
+		foodFactor := 1.0 + float64(sInfo.CountGoldenFood)/float64(sInfo.CountFood)
+		return float64(sInfo.TotalFoodPoints) * foodFactor / (float64(dist) + 1)
 
+	default:
 		profit := float64(food.Points) / (dist + 10)
 
 		if isGolden {
@@ -216,9 +223,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		usedIDs[maxInd] = true
-		fmt.Println(maxProfit)
+		//fmt.Println(maxProfit)
 		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
-			fmt.Println("Идем в центр: ", snake.Id, maxProfit)
+			//fmt.Println("Идем в центр: ", snake.Id, maxProfit)
 			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
