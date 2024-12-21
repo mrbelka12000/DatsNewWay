@@ -20,7 +20,7 @@ type Client struct {
 const (
 	localDomain = "http://localhost:8080/next"
 	testDomain  = "https://games-test.datsteam.dev/play/snake3d/player/move"
-	domain      = "https://games.datsteam.dev/play/snake3d"
+	domain      = "https://games.datsteam.dev/play/snake3d/player/move"
 )
 
 func NewClient(token string) *Client {
