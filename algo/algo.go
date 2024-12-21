@@ -19,6 +19,17 @@ type (
 )
 
 var (
+	segmentNeighbours = map[int][]int{
+		1: {2, 3, 4, 5, 6, 7},
+		2: {1, 3, 4, 5, 6, 8},
+		3: {1, 2, 4, 5, 7, 8},
+		4: {1, 2, 3, 6, 7, 8},
+		5: {1, 2, 3, 6, 7, 8},
+		6: {1, 2, 4, 5, 7, 8},
+		7: {1, 3, 4, 5, 6, 8},
+		8: {2, 3, 4, 5, 6, 7},
+	}
+
 	dirs = [6][3]int{
 		{1, 0, 0},
 		{-1, 0, 0},
@@ -40,8 +51,9 @@ var (
 		7: &SegmentInfo{},
 		8: &SegmentInfo{},
 	}
-	foodTotalPoints = 0
-	avgTotal        = 0
+	foodTotalPoints   = 0
+	avgTotal          = 0
+	minorSectionTotal = math.MaxInt64
 
 	totalProfit      float64
 	totalProfitCount int
@@ -123,12 +135,6 @@ func prepareSegmentPriority(r entity.Response) {
 		snakeCount += segment.CountSnakes
 		goldenCount += segment.CountGoldenFood
 	}
-
-	//fmt.Println("total count", totalCount)
-	//fmt.Println("snake count", snakeCount)
-	//fmt.Println("golden count", goldenCount)
-
-	foodTotalPoints = 0
 }
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
@@ -139,7 +145,21 @@ func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
 }
 
-func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float64 {
+func segmentPriorityWithMainPriority(points int, dist float64, segmentId int) float64 {
+	x := calculateSegmentPriority(segmentId)
+	y := float64(points) / (dist + 1)
+	fmt.Println("points", points)
+	fmt.Println("distant", dist)
+	fmt.Println("segment: ", x)
+	fmt.Println("main: ", y)
+	return x + y
+}
+
+func calculateSegmentPriority(index int) float64 {
+	return float64(segmentInfo[index].TotalFoodPoints) / float64(foodTotalPoints/8)
+}
+
+func calculateProfit(head []int, food entity.Food, isGolden bool, ind int, withSegment bool) float64 {
 	dist := getManhattanDistance(head, food.C)
 
 	segmentID := segmentPriority(food.C, orderX, orderY, orderZ)
@@ -147,6 +167,25 @@ func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float
 	sInfo := segmentInfo[segmentID]
 	if sInfo.TotalFoodPoints == 0 {
 		return 0
+	}
+
+	if withSegment {
+		neighbours := segmentNeighbours[segmentID]
+		maxProfit := float64(math.MinInt64 + 1)
+
+		prof := segmentPriorityWithMainPriority(food.Points, dist, segmentID)
+		if prof > maxProfit {
+			maxProfit = prof
+		}
+
+		for _, neighbourSegmentId := range neighbours {
+			prof := segmentPriorityWithMainPriority(food.Points, dist, neighbourSegmentId)
+			if prof > maxProfit {
+				maxProfit = prof
+			}
+		}
+
+		return maxProfit
 	}
 
 	// Calculate FoodFactor
@@ -232,7 +271,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				continue
 			}
 
-			profit := calculateProfit(head, f, false, 10)
+			profit := calculateProfit(head, f, false, 10, true)
 			if profit > maxProfit {
 				maxProfit = profit
 				maxInd = i
@@ -275,6 +314,8 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 	}
 
+	minorSectionTotal = math.MaxInt64
+	foodTotalPoints = 0
 	return obj
 }
 
@@ -406,28 +447,28 @@ func isCentralized(head []int, x, y, z int) bool {
 func segmentPriority(point []int, x, y, z int) int {
 	segmentId := 0
 	switch {
-	case isCentralized(point, x-x/2, y-y/2, z-z/2):
+	case isCentralized(point, x-x/2, y-y/2, z-z/2): // 25 25 25
 		segmentId = 1
 
-	case isCentralized(point, x-x/2, y-y/2, z+z/2):
+	case isCentralized(point, x-x/2, y-y/2, z+z/2): // 25 25 75
 		segmentId = 2
 
-	case isCentralized(point, x-x/2, y+y/2, z-z/2):
+	case isCentralized(point, x-x/2, y+y/2, z-z/2): // 25 75 25
 		segmentId = 3
 
-	case isCentralized(point, x-x/2, y+y/2, z+z/2):
+	case isCentralized(point, x-x/2, y+y/2, z+z/2): // 25 75 75
 		segmentId = 4
 
-	case isCentralized(point, x+x/2, y-y/2, z-z/2):
+	case isCentralized(point, x+x/2, y-y/2, z-z/2): // 75 25 25
 		segmentId = 5
 
-	case isCentralized(point, x+x/2, y-y/2, z+z/2):
+	case isCentralized(point, x+x/2, y-y/2, z+z/2): // 75 25 75
 		segmentId = 6
 
-	case isCentralized(point, x+x/2, y+y/2, z-z/2):
+	case isCentralized(point, x+x/2, y+y/2, z-z/2): // 75 75 25
 		segmentId = 7
 
-	case isCentralized(point, x+x/2, y+y/2, z+z/2):
+	case isCentralized(point, x+x/2, y+y/2, z+z/2): // 75 75 75
 		segmentId = 8
 	}
 
