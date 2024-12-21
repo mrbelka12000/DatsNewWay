@@ -1,12 +1,10 @@
 package algo
 
 import (
+	"DatsNewWay/entity"
 	"container/heap"
 	"fmt"
 	"math"
-	"sort"
-
-	"DatsNewWay/entity"
 )
 
 const (
@@ -37,15 +35,36 @@ func isBadPoint(currentPosition, food []int) bool {
 		return true
 	}
 
+	if (food[0] > center[0] && currentPosition[0] < center[0]) || (food[0] < center[0] && currentPosition[0] > center[0]) {
+		return true
+	}
+	if (food[1] > center[1] && currentPosition[1] < center[1]) || (food[1] < center[1] && currentPosition[1] > center[1]) {
+		return true
+	}
+	if (food[2] > center[2] && currentPosition[2] < center[2]) || (food[2] < center[2] && currentPosition[2] > center[2]) {
+		return true
+	}
+
 	return false
 }
 
+func calculatePriority(distance, point, k1, k2 int) int {
+	return k1*point + k2*distance
+}
+
+var flags []bool
+
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	center[0], center[1], center[2] = calculateCenter(r.MapSize[0], r.MapSize[1], r.MapSize[2])
+
+	for i := 0; i < len(r.Snakes); i++ {
+		flags = append(flags, false)
+	}
+
 	return bfs(r)
 }
 
-var flag = false
+var mapping = map[[3]int]bool{}
 
 func bfs(r entity.Response) (obj entity.Payload) {
 
@@ -79,28 +98,34 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
-	sort.Slice(r.Food, func(i, j int) bool {
-		return r.Food[i].Points > r.Food[j].Points
-	})
-
 	used := make(map[[3]int]bool)
-	for _, snake := range r.Snakes {
+	for idx, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
 			continue
 		}
 
 		var (
-			minDist = math.MaxInt32
-			minInd  = -1
+			minDist     = math.MaxInt32
+			minInd      = -1
+			maxPriority = math.MinInt32
 		)
 
 		for i, f := range r.Food {
 			if f.Points < 0 {
-				break
+				continue
 			}
 			dist := getManhattanDistance(snake.Geometry[0], f.C)
 
-			if !flag && isBadPoint(snake.Geometry[0], f.C) {
+			if !flags[idx] && isBadPoint(snake.Geometry[0], f.C) {
+				continue
+			}
+
+			if flags[idx] {
+				priority := calculatePriority(dist, f.Points, 2, 1)
+				if priority > maxPriority {
+					maxPriority = priority
+					minInd = i
+				}
 				continue
 			}
 
@@ -111,12 +136,18 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		if minInd == -1 {
-			flag = true
+			flags[idx] = true
 			minInd = 0
 		}
 
 		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
 		//dir := runner(r, snake.Geometry[0], obst, food, used)
+		if _, ok := mapping[[3]int{r.Food[minInd].C[0], r.Food[minInd].C[1], r.Food[minInd].C[2]}]; !ok {
+			mapping[[3]int{r.Food[minInd].C[0], r.Food[minInd].C[1], r.Food[minInd].C[2]}] = true
+		} else {
+			fmt.Printf("индекс змейки: %v, direction: %v\n", r.Snakes[idx], dir)
+		}
+
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
