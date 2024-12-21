@@ -3,6 +3,7 @@ package algo
 import (
 	"container/heap"
 	"fmt"
+	"math"
 
 	"DatsNewWay/entity"
 )
@@ -95,6 +96,8 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			maxInd    int
 			sum       int
 			head      = snake.Geometry[0]
+			minDist   = math.MaxInt32
+			minInd    int
 		)
 
 		for i, f := range r.Food {
@@ -110,39 +113,36 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				maxProfit = profit
 				maxInd = i
 			}
+
+			dist := getManhattanDistance(head, f.C)
+			if minDist > dist {
+				minDist = dist
+				minInd = i
+			}
 			sum += f.Points
 		}
 
-		for i, coord := range r.SpecialFood.Golden {
-			if usedIDs[i] {
-				continue
-			}
-
-			profit := calculateProfit(head, entity.Food{
-				C:      coord,
-				Points: sum / len(r.Food),
-			}, true)
-			if profit > maxProfit {
-				maxProfit = profit
-				maxInd = i
-			}
-		}
-
 		usedIDs[maxInd] = true
-		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 5 {
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 2 {
+			fmt.Println("Идем в центр: ", snake.Id, maxProfit)
 			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
 			})
-			continue
+		} else if maxProfit > 1 {
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
+		} else {
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
 		}
-
-		dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
-		obj.Snakes = append(obj.Snakes, entity.Snake{
-			Id:        snake.Id,
-			Direction: dir,
-		})
 	}
 
 	return obj
