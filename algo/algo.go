@@ -58,8 +58,10 @@ func runProfitAvg() {
 	for {
 		<-t.C
 		oldProfit := currentProfit
-		currentProfit = totalProfit / float64(totalProfitCount)
+		currentProfit = (totalProfit / float64(totalProfitCount)) * 0.75
 		fmt.Printf("old profit:%v, new profit:%v\n", oldProfit, currentProfit)
+		totalProfit = 0
+		totalProfitCount = 0
 	}
 }
 
@@ -148,7 +150,7 @@ func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float
 	}
 
 	// Calculate FoodFactor
-	profit := float64(food.Points) / (dist + 10)
+	profit := float64(food.Points) / (dist + 1)
 
 	if isGolden {
 		profit *= 10
@@ -184,18 +186,17 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 	// fill obstacles with enemies
 	for _, enemy := range r.Enemies {
-		for i, coord := range enemy.Geometry {
-			if i == 0 {
-				// handle + 2 cell after enemies head
-				for _, dir := range dirs {
-					key := [3]int{coord[0] + dir[0], coord[1] + dir[1], coord[2] + dir[2]}
-					obst[key] = true
-					for _, dd := range dirs {
-						key[0] += dd[0]
-						key[1] += dd[1]
-						key[2] += dd[2]
-						obst[key] = true
-					}
+		for _, coord := range enemy.Geometry {
+			for _, dir := range dirs {
+				key := [3]int{coord[0] + dir[0], coord[1] + dir[1], coord[2] + dir[2]}
+				obst[key] = true
+				kk := key
+				for _, dd := range dirs {
+					kk[0] += dd[0]
+					kk[1] += dd[1]
+					kk[2] += dd[2]
+					obst[kk] = true
+					kk = key
 				}
 			}
 
@@ -227,10 +228,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		)
 
 		for i, f := range r.Food {
-			if usedIDs[i] {
-				continue
-			}
-			if f.Points < 0 {
+			if usedIDs[i] || f.Points < 0 {
 				continue
 			}
 
@@ -304,7 +302,7 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 	var deep int
 
 	for q.Len() > 0 {
-		if deep > 5 {
+		if deep > 10 {
 			break
 		}
 		size := q.Len()
