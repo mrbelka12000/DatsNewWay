@@ -447,28 +447,28 @@ func isCentralized(head []int, x, y, z int) bool {
 func segmentPriority(point []int, x, y, z int) int {
 	segmentId := 0
 	switch {
-	case isCentralized(point, x-x/2, y-y/2, z-z/2): // 25 25 25
+	case isCentralized(point, x-x/3, y-y/3, z-z/3): // 25 25 25
 		segmentId = 1
 
-	case isCentralized(point, x-x/2, y-y/2, z+z/2): // 25 25 75
+	case isCentralized(point, x-x/3, y-y/3, z+z/3): // 25 25 75
 		segmentId = 2
 
-	case isCentralized(point, x-x/2, y+y/2, z-z/2): // 25 75 25
+	case isCentralized(point, x-x/3, y+y/3, z-z/3): // 25 75 25
 		segmentId = 3
 
-	case isCentralized(point, x-x/2, y+y/2, z+z/2): // 25 75 75
+	case isCentralized(point, x-x/3, y+y/3, z+z/3): // 25 75 75
 		segmentId = 4
 
-	case isCentralized(point, x+x/2, y-y/2, z-z/2): // 75 25 25
+	case isCentralized(point, x+x/3, y-y/3, z-z/3): // 75 25 25
 		segmentId = 5
 
-	case isCentralized(point, x+x/2, y-y/2, z+z/2): // 75 25 75
+	case isCentralized(point, x+x/3, y-y/3, z+z/3): // 75 25 75
 		segmentId = 6
 
-	case isCentralized(point, x+x/2, y+y/2, z-z/2): // 75 75 25
+	case isCentralized(point, x+x/3, y+y/3, z-z/3): // 75 75 25
 		segmentId = 7
 
-	case isCentralized(point, x+x/2, y+y/2, z+z/2): // 75 75 75
+	case isCentralized(point, x+x/3, y+y/3, z+z/3): // 75 75 75
 		segmentId = 8
 	}
 
