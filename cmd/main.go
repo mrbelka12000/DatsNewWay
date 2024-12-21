@@ -1,12 +1,12 @@
 package main
 
 import (
+	"DatsNewWay/algo_a_section"
 	"context"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
-	"DatsNewWay/algo"
 	"DatsNewWay/client"
 	"DatsNewWay/config"
 	"DatsNewWay/entity"
@@ -49,7 +49,7 @@ func start(ctx context.Context, cl *client.Client) error {
 		select {
 		case <-ticker.C:
 
-			payload := algo.GetNextDirection(resp)
+			payload := algo_a_section.GetNextDirection(resp)
 
 			resp, err = cl.Get(ctx, payload)
 			if err != nil {
