@@ -11,7 +11,7 @@ def load_and_extract_data(filepath):
     # Extract data for visualization
     # Snake geometries
     snake_x, snake_y, snake_z = [], [], []
-    for i, snake in enumerate(data['snakes']):
+    for snake in data['snakes']:
         for coord in snake['geometry']:
             snake_x.append(coord[0])
             snake_y.append(coord[1])
@@ -19,7 +19,7 @@ def load_and_extract_data(filepath):
 
     # Enemy geometries
     enemy_x, enemy_y, enemy_z = [], [], []
-    for i, enemy in enumerate(data['enemies']):
+    for enemy in data['enemies']:
         for coord in enemy['geometry']:
             enemy_x.append(coord[0])
             enemy_y.append(coord[1])
@@ -51,7 +51,7 @@ def load_and_extract_data(filepath):
         fence_y.append(coord[1])
         fence_z.append(coord[2])
 
-    points =  data['points']
+    points = data['points']
     return {
         'snake': (snake_x, snake_y, snake_z),
         'enemy': (enemy_x, enemy_y, enemy_z),
@@ -76,6 +76,7 @@ def update(frame):
 
     # Plot each type of entity
     snake_x, snake_y, snake_z = data['snake']
+    enemy_x, enemy_y, enemy_z = data['enemy']
     food_x, food_y, food_z = data['food']
     special_x, special_y, special_z = data['special']
     fence_x, fence_y, fence_z = data['fence']
@@ -84,6 +85,7 @@ def update(frame):
     ax.scatter(food_x, food_y, food_z, c='green', marker='s', label='Food')
     ax.scatter(special_x, special_y, special_z, c='gold', marker='x', label='Special Food')
     ax.scatter(fence_x, fence_y, fence_z, c='black', marker='d', label='Fences')
+    ax.scatter(enemy_x, enemy_y, enemy_z, c='red', marker='^', label='Enemy')
 
     # Customize the plot
     ax.set_xlabel('X Axis')
@@ -96,5 +98,5 @@ def update(frame):
 # Step 4: Set up the animation
 ani = animation.FuncAnimation(fig, update, interval=1000)  # Update every 1000ms (1 second)
 
-# Step 5: Display the plot
+# Step 5: Display the plot with interactivity
 plt.show()
