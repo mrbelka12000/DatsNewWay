@@ -52,15 +52,10 @@ func calculatePriority(distance, point, k1, k2 int) int {
 	return k1*point + k2*distance
 }
 
-var flags []bool
+var flags = [3]bool{false, false, false}
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	center[0], center[1], center[2] = calculateCenter(r.MapSize[0], r.MapSize[1], r.MapSize[2])
-
-	for i := 0; i < len(r.Snakes); i++ {
-		flags = append(flags, false)
-	}
-
 	return bfs(r)
 }
 
@@ -142,8 +137,8 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 		dir := runnerAStar(r, snake.Geometry[0], r.Food[minInd].C, obst, used)
 		//dir := runner(r, snake.Geometry[0], obst, food, used)
-		if _, ok := mapping[[3]int{r.Food[minInd].C[0], r.Food[minInd].C[1], r.Food[minInd].C[2]}]; !ok {
-			mapping[[3]int{r.Food[minInd].C[0], r.Food[minInd].C[1], r.Food[minInd].C[2]}] = true
+		if _, ok := mapping[[3]int{snake.Geometry[0][0], snake.Geometry[0][1], snake.Geometry[0][2]}]; !ok {
+			mapping[[3]int{snake.Geometry[0][0], snake.Geometry[0][1], snake.Geometry[0][2]}] = true
 		} else {
 			fmt.Printf("индекс змейки: %v, direction: %v\n", r.Snakes[idx], dir)
 		}
