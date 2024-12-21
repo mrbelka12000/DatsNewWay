@@ -115,6 +115,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		usedIDs[maxInd] = true
+		fmt.Println(maxProfit)
 		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 2 {
 			fmt.Println("Идем в центр: ", snake.Id, maxProfit)
 			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
@@ -122,13 +123,15 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				Id:        snake.Id,
 				Direction: dir,
 			})
-		} else if maxProfit > 1 {
+		} else if maxProfit > 6 {
+			// run for profitable mandarin
 			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
 			})
 		} else {
+			// run for minimal distance
 			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
@@ -164,7 +167,7 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 	var deep int
 
 	for q.Len() > 0 {
-		if deep > 10 {
+		if deep > 5 {
 			break
 		}
 		size := q.Len()
