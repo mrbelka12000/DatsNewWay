@@ -3,8 +3,6 @@ package algo
 import (
 	"container/heap"
 	"fmt"
-	"math"
-	"sort"
 
 	"DatsNewWay/entity"
 )
@@ -16,6 +14,12 @@ const (
 
 func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	return bfs(r)
+}
+
+func calculateProfit(head []int, food entity.Food) float64 {
+	dist := getManhattanDistance(head, food.C)
+
+	return float64(food.Points)/float64(dist) + 1
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
@@ -50,10 +54,6 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		food[key] = true
 	}
 
-	sort.Slice(r.Food, func(i, j int) bool {
-		return r.Food[i].Points > r.Food[j].Points
-	})
-
 	used := make(map[int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
@@ -61,9 +61,9 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		var (
-			minDist = math.MaxInt32
-			minInd  int
-			head    = snake.Geometry[0]
+			maxProfit float64
+			maxInd    int
+			head      = snake.Geometry[0]
 		)
 
 		for i, f := range r.Food {
@@ -71,19 +71,18 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				continue
 			}
 			if f.Points < 0 {
-				break
+				continue
 			}
-			if isCentralized(f.C, r.MapSize[0], r.MapSize[1], r.MapSize[2]) {
-				dist := getManhattanDistance(head, f.C)
-				if dist < minDist {
-					minDist = dist
-					minInd = i
-				}
+
+			profit := calculateProfit(head, f)
+			if profit > maxProfit {
+				maxProfit = profit
+				maxInd = i
 			}
 		}
 
-		used[minInd] = true
-		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && minDist > 5 {
+		used[maxInd] = true
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
 			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
@@ -94,7 +93,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 		fmt.Println(head, " in centre")
 
-		dir := runnerAStar(r, head, r.Food[minInd].C, obst)
+		dir := runnerAStar(r, head, r.Food[maxInd].C, obst)
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
