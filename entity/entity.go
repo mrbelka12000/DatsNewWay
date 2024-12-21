@@ -8,6 +8,8 @@ type Snake struct {
 	DeathCount     int     `json:"deathCount"`
 	Status         string  `json:"status"`
 	ReviveRemainMs int     `json:"reviveRemainMs"`
+	Weight         int     `json:"-"`
+	SegmentId      int     `json:"-"`
 }
 
 type Enemy struct {
@@ -17,9 +19,11 @@ type Enemy struct {
 }
 
 type Food struct {
-	C      []int `json:"c"`
-	Points int   `json:"points"`
-	Type   int   `json:"type"`
+	C          []int `json:"c"`
+	Points     int   `json:"points"`
+	Type       int   `json:"type"`
+	Weight     int   `json:"-"`
+	SegmentInd int   `json:"-"`
 }
 
 type SpecialFood struct {
