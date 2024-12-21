@@ -154,12 +154,14 @@ func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float
 		return 0
 	}
 
-	// Calculate FoodFactor
-	profit := float64(food.Points) / (dist + distAdd)
+	points := food.Points
 
 	if isGolden {
-		profit *= 5
+		points *= 10
 	}
+
+	// Calculate FoodFactor
+	profit := float64(points) / (dist + distAdd)
 
 	return profit
 }
@@ -206,6 +208,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 	}
 
 	usedIDs := make(map[int]bool)
+	usedGoldIDs := make(map[int]bool)
 	for _, snake := range r.Snakes {
 		if snake.Status == snakeStatusDead {
 			continue
@@ -241,12 +244,43 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			sum += f.Points
 		}
 
-		totalProfit += maxProfit
+		var (
+			goldProfit float64
+			goldInd    int
+		)
+
+		for i, gold := range r.SpecialFood.Golden {
+			if usedGoldIDs[i] {
+				continue
+			}
+			profit := calculateProfit(head, entity.Food{
+				C:      gold,
+				Points: totalFoodPoints / len(r.Food),
+			}, true, 10)
+			if profit > goldProfit {
+				goldProfit = profit
+				goldInd = i
+			}
+		}
 		totalProfitCount++
+
+		if maxProfit < goldProfit && goldProfit > currentProfit {
+			fmt.Println("went to gold")
+			usedGoldIDs[goldInd] = true
+			totalProfit += goldProfit
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.SpecialFood.Golden[goldInd], obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
+			continue
+		}
+
+		totalProfit += maxProfit
 
 		if maxProfit > currentProfit {
 			// run for profitable mandarin
-			fmt.Println("get maximum profit")
+			fmt.Println("get most valuable profit")
 			usedIDs[maxInd] = true
 			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
@@ -254,44 +288,14 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				Direction: dir,
 			})
 		} else {
-			var (
-				goldProfit float64
-				goldInd    int
-			)
-
-			for i, gold := range r.SpecialFood.Golden {
-				if usedIDs[i] {
-					continue
-				}
-				profit := calculateProfit(head, entity.Food{
-					C:      gold,
-					Points: totalFoodPoints / len(r.Food),
-				}, true, 10)
-				if profit > goldProfit {
-					goldProfit = profit
-					goldInd = i
-				}
-			}
-
-			if goldProfit > currentProfit {
-				fmt.Println("went to golden food")
-				usedIDs[goldInd] = true
-				dir := runnerAStar(r, head, getPreviousPoint(snake), r.SpecialFood.Golden[goldInd], obst)
-				obj.Snakes = append(obj.Snakes, entity.Snake{
-					Id:        snake.Id,
-					Direction: dir,
-				})
-			} else {
-				// run for minimal distance
-				fmt.Println("went to minimal distance food")
-				usedIDs[minInd] = true
-				dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
-				obj.Snakes = append(obj.Snakes, entity.Snake{
-					Id:        snake.Id,
-					Direction: dir,
-				})
-			}
-
+			// run for minimal distance
+			fmt.Println("went to minimal distance food")
+			usedIDs[minInd] = true
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
 		}
 	}
 
