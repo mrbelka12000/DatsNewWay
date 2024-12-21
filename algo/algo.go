@@ -8,6 +8,15 @@ import (
 	"DatsNewWay/entity"
 )
 
+type (
+	SegmentInfo struct {
+		CountSnakes     int
+		CountFood       int
+		CountGoldenFood int
+		TotalFoodPoints int
+	}
+)
+
 var (
 	dirs = [6][3]int{
 		{1, 0, 0},
@@ -17,9 +26,21 @@ var (
 		{0, 0, 1},
 		{0, 0, -1},
 	}
+	orderX, orderY, orderZ int
 
-	segmentFoodInfo  = make(map[int]int)
-	segmentSnakeInfo = make(map[int]int)
+	segmentInfo = map[int]*SegmentInfo{
+		0: &SegmentInfo{},
+		1: &SegmentInfo{},
+		2: &SegmentInfo{},
+		3: &SegmentInfo{},
+		4: &SegmentInfo{},
+		5: &SegmentInfo{},
+		6: &SegmentInfo{},
+		7: &SegmentInfo{},
+		8: &SegmentInfo{},
+	}
+	foodTotalPoints = 0
+	avgTotal        = 0
 )
 
 const (
@@ -27,29 +48,72 @@ const (
 	snakeStatusDead  = "dead"
 )
 
-func GetNextDirection(r entity.Response) (obj entity.Payload) {
+func segmentSnakePriority(point []int, x, y, z int) {
+	segmentId := segmentPriority(point, x, y, z)
+	segmentInfo[segmentId].CountSnakes++
+}
+
+func segmentGoldenFoodPriority(goldenFood []int, x, y, z int) {
+	segmentId := segmentPriority(goldenFood, x, y, z)
+	segmentInfo[segmentId].CountGoldenFood++
+	goldenApproximate := avgTotal * 10
+	segmentInfo[segmentId].TotalFoodPoints += goldenApproximate
+}
+
+func segmentFoodPriority(food *entity.Food, x, y, z int) {
+	food.SegmentInd = segmentPriority(food.C, x, y, z)
+	segmentInfo[food.SegmentInd].CountFood++
+	foodTotalPoints += food.Points
+	segmentInfo[food.SegmentInd].TotalFoodPoints += food.Points
+}
+
+func prepareSegmentPriority(r entity.Response) {
+
 	for _, food := range r.Food {
-		segmentPriority(food.C, r.MapSize[0], r.MapSize[1], r.MapSize[2], "FOOD")
+		segmentFoodPriority(&food, r.MapSize[0], r.MapSize[1], r.MapSize[2])
 	}
+	avgTotal = foodTotalPoints / len(r.Food)
 
 	for _, snake := range r.Enemies {
-		segmentPriority(snake.Geometry[0], r.MapSize[0], r.MapSize[1], r.MapSize[2], "SNAKE")
+		segmentSnakePriority(snake.Geometry[0], r.MapSize[0], r.MapSize[1], r.MapSize[2])
 	}
 
+	for _, goldenFood := range r.SpecialFood.Golden {
+		segmentGoldenFoodPriority(goldenFood, r.MapSize[0], r.MapSize[1], r.MapSize[2])
+	}
+
+	foodTotalPoints = 0
+}
+func GetNextDirection(r entity.Response) (obj entity.Payload) {
+	prepareSegmentPriority(r)
+	orderX = r.MapSize[0]
+	orderY = r.MapSize[1]
+	orderZ = r.MapSize[2]
 	return bfs(r)
 }
 
 func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float64 {
 	dist := getManhattanDistance(head, food.C)
 
+	segmentID := segmentPriority(food.C, orderX, orderY, orderZ)
+
+	sInfo := segmentInfo[segmentID]
+	if sInfo.TotalFoodPoints == 0 {
+		return 0
+	}
+
+	// Calculate FoodFactor
+
+	foodFactor := 1.0 + float64(sInfo.CountGoldenFood)/float64(sInfo.CountFood)
+	return float64(sInfo.TotalFoodPoints) * foodFactor / (float64(sInfo.CountSnakes) + 1) / (float64(dist) + 1)
+
 	switch {
-	case ind == 0:
+	case ind%5 == 0:
 		return 0
-
-	case ind == 1:
-
+	case ind%5 == 1:
+		//sInfo.TotalFoodPoints / sInfo.CountSnakes
 		return 0
-	case ind == 2:
+	case ind%5 == 2:
 		return 0
 	default:
 
@@ -140,7 +204,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 		usedIDs[maxInd] = true
 		fmt.Println(maxProfit)
-		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 2 {
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
 			fmt.Println("Идем в центр: ", snake.Id, maxProfit)
 			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
@@ -203,7 +267,7 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 			// If the target is reached, return the path
 			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
 				if len(curr.path) > 0 {
-					fmt.Println("Found direction for: ", currPoint, curr.path[0])
+					//fmt.Println("Found direction for: ", currPoint, curr.path[0])
 					return curr.path[0]
 				}
 				continue
@@ -292,45 +356,32 @@ func isCentralized(head []int, x, y, z int) bool {
 		centreZ-quadZ < head[2] && centreZ+quadZ > head[2]
 }
 
-func segmentPriority(point []int, x, y, z int, t string) int {
+func segmentPriority(point []int, x, y, z int) int {
 	segmentId := 0
-
-	if isCentralized(point, x-x/2, y-y/2, z-z/2) {
+	switch {
+	case isCentralized(point, x-x/2, y-y/2, z-z/2):
 		segmentId = 1
-	}
 
-	if isCentralized(point, x-x/2, y-y/2, z+z/2) {
+	case isCentralized(point, x-x/2, y-y/2, z+z/2):
 		segmentId = 2
-	}
 
-	if isCentralized(point, x-x/2, y+y/2, z-z/2) {
+	case isCentralized(point, x-x/2, y+y/2, z-z/2):
 		segmentId = 3
-	}
 
-	if isCentralized(point, x-x/2, y+y/2, z+z/2) {
+	case isCentralized(point, x-x/2, y+y/2, z+z/2):
 		segmentId = 4
-	}
 
-	if isCentralized(point, x+x/2, y-y/2, z-z/2) {
+	case isCentralized(point, x+x/2, y-y/2, z-z/2):
 		segmentId = 5
-	}
 
-	if isCentralized(point, x+x/2, y-y/2, z+z/2) {
+	case isCentralized(point, x+x/2, y-y/2, z+z/2):
 		segmentId = 6
-	}
 
-	if isCentralized(point, x+x/2, y+y/2, z-z/2) {
+	case isCentralized(point, x+x/2, y+y/2, z-z/2):
 		segmentId = 7
-	}
 
-	if isCentralized(point, x+x/2, y+y/2, z+z/2) {
+	case isCentralized(point, x+x/2, y+y/2, z+z/2):
 		segmentId = 8
-	}
-
-	if t == "SNAKE" {
-		segmentSnakeInfo[segmentId]++
-	} else if t == "FOOD" {
-		segmentFoodInfo[segmentId]++
 	}
 
 	return segmentId
