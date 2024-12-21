@@ -32,15 +32,10 @@ func main() {
 }
 
 func start(ctx context.Context, cl *client.Client) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(400 * time.Millisecond)
 	defer ticker.Stop()
 
-	var (
-		resp entity.Response
-		err  error
-	)
-
-	resp, err = cl.Get(ctx, entity.Payload{})
+	resp, err := cl.Get(ctx, entity.Payload{})
 	if err != nil {
 		log.Err(err).Msg("failed to create client")
 		return err

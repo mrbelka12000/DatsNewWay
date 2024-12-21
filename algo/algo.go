@@ -176,19 +176,8 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 			// If the target is reached, return the path
 			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
 				if len(curr.path) > 0 {
-					var isInvalid bool
-					for _, path := range curr.path {
-						if obst[[3]int{path[0], path[1], path[2]}] {
-							isInvalid = true
-							break
-						}
-					}
-
-					if !isInvalid {
-						fmt.Println("Found direction for: ", currPoint, curr.path[0])
-						return curr.path[0]
-					}
-					fmt.Println("Suka")
+					fmt.Println("Found direction for: ", currPoint, curr.path[0])
+					return curr.path[0]
 				}
 				continue
 			}
