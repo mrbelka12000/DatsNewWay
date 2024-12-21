@@ -3,6 +3,7 @@ package algo
 import (
 	"container/heap"
 	"fmt"
+	"math"
 
 	"DatsNewWay/entity"
 )
@@ -87,6 +88,8 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			maxInd    int
 			sum       int
 			head      = snake.Geometry[0]
+			minDist   = math.MaxInt32
+			minInd    int
 		)
 
 		for i, f := range r.Food {
@@ -102,39 +105,36 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				maxProfit = profit
 				maxInd = i
 			}
+
+			dist := getManhattanDistance(head, f.C)
+			if minDist > dist {
+				minDist = dist
+				minInd = i
+			}
 			sum += f.Points
 		}
 
-		for i, coord := range r.SpecialFood.Golden {
-			if usedIDs[i] {
-				continue
-			}
-
-			profit := calculateProfit(head, entity.Food{
-				C:      coord,
-				Points: sum / len(r.Food),
-			}, true)
-			if profit > maxProfit {
-				maxProfit = profit
-				maxInd = i
-			}
-		}
-
 		usedIDs[maxInd] = true
-		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 5 {
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 2 {
+			fmt.Println("Идем в центр: ", snake.Id, maxProfit)
 			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
 			})
-			continue
+		} else if maxProfit > 1 {
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
+		} else {
+			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
+			obj.Snakes = append(obj.Snakes, entity.Snake{
+				Id:        snake.Id,
+				Direction: dir,
+			})
 		}
-
-		dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
-		obj.Snakes = append(obj.Snakes, entity.Snake{
-			Id:        snake.Id,
-			Direction: dir,
-		})
 	}
 
 	return obj
@@ -176,8 +176,19 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 			// If the target is reached, return the path
 			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
 				if len(curr.path) > 0 {
-					fmt.Println("Found direction for: ", currPoint, curr.path[0])
-					return curr.path[0]
+					var isInvalid bool
+					for _, path := range curr.path {
+						if obst[[3]int{path[0], path[1], path[2]}] {
+							isInvalid = true
+							break
+						}
+					}
+
+					if !isInvalid {
+						fmt.Println("Found direction for: ", currPoint, curr.path[0])
+						return curr.path[0]
+					}
+					fmt.Println("Suka")
 				}
 				continue
 			}
