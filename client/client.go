@@ -18,9 +18,9 @@ type Client struct {
 }
 
 const (
-	localDomain = "http://localhost:8080/next"
-	testDomain  = "https://games-test.datsteam.dev/play/snake3d/player/move"
-	domain      = "https://games.datsteam.dev/play/snake3d"
+	//localDomain = "http://localhost:8080/next"
+	testDomain = "https://games-test.datsteam.dev/play/snake3d/player/move"
+	domain     = "https://games.datsteam.dev/play/snake3d"
 )
 
 func NewClient(token string) *Client {
@@ -49,7 +49,7 @@ func (c *Client) Get(ctx context.Context, payload entity.Payload) (entity.Respon
 		return entity.Response{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, localDomain, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, testDomain, bytes.NewReader(body))
 	if err != nil {
 		return entity.Response{}, err
 	}

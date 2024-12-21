@@ -28,7 +28,7 @@ func GetNextDirection(r entity.Response) (obj entity.Payload) {
 func calculateProfit(head []int, food entity.Food, isGolden bool) float64 {
 	dist := getManhattanDistance(head, food.C)
 
-	profit := float64(food.Points) / (float64(dist) + 1)
+	profit := float64(food.Points) / (float64(dist) + 10)
 
 	if isGolden {
 		profit *= 10
@@ -105,25 +105,24 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			sum += f.Points
 		}
 
-		//for i, coord := range r.SpecialFood.Golden {
-		//	if usedIDs[i] {
-		//		continue
-		//	}
-		//
-		//	profit := calculateProfit(head, entity.Food{
-		//		C:      coord,
-		//		Points: sum / len(r.Food),
-		//	}, true)
-		//	if profit > maxProfit {
-		//		maxProfit = profit
-		//		fmt.Println(maxProfit)
-		//		maxInd = i
-		//	}
-		//}
+		for i, coord := range r.SpecialFood.Golden {
+			if usedIDs[i] {
+				continue
+			}
+
+			profit := calculateProfit(head, entity.Food{
+				C:      coord,
+				Points: sum / len(r.Food),
+			}, true)
+			if profit > maxProfit {
+				maxProfit = profit
+				maxInd = i
+			}
+		}
 
 		usedIDs[maxInd] = true
-		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
-			dir := runnerAStar(r, head, []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, getPreviousPoint(snake), obst)
+		if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 5 {
+			dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
 				Id:        snake.Id,
 				Direction: dir,
@@ -131,7 +130,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 			continue
 		}
 
-		dir := runnerAStar(r, head, r.Food[maxInd].C, getPreviousPoint(snake), obst)
+		dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
 		obj.Snakes = append(obj.Snakes, entity.Snake{
 			Id:        snake.Id,
 			Direction: dir,
@@ -177,7 +176,7 @@ func runnerAStar(r entity.Response, currPoint, prevPoint, target []int, obst map
 			// If the target is reached, return the path
 			if cp[0] == target[0] && cp[1] == target[1] && cp[2] == target[2] {
 				if len(curr.path) > 0 {
-					fmt.Println(curr.path)
+					fmt.Println("Found direction for: ", currPoint, curr.path[0])
 					return curr.path[0]
 				}
 				continue
