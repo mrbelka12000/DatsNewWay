@@ -41,17 +41,21 @@ func start(ctx context.Context, cl *client.Client) error {
 		return err
 	}
 
+	var isError bool
 	for {
 		select {
 		case <-ticker.C:
 
 			start := time.Now()
-			payload := algo.GetNextDirection(resp)
-
-			resp, err = cl.Get(ctx, payload)
-			if err != nil {
-				log.Err(err).Msg("failed to create client")
-				continue
+			if !isError {
+				payload := algo.GetNextDirection(resp)
+				resp, err = cl.Get(ctx, payload)
+				if err != nil {
+					log.Err(err).Msg("failed to create client")
+					isError = true
+					continue
+				}
+				isError = false
 			}
 
 			log.Info().Msg(fmt.Sprintf("successfully send data, spent: %v", time.Since(start).Seconds()))

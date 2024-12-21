@@ -46,6 +46,8 @@ var (
 	totalProfit      float64
 	totalProfitCount int
 	currentProfit    = 5.0
+
+	distAdd = 10.0
 )
 
 func init() {
@@ -59,7 +61,7 @@ func runProfitAvg() {
 		<-t.C
 		oldProfit := currentProfit
 		currentProfit = (totalProfit / float64(totalProfitCount)) * 0.75
-		fmt.Printf("old profit:%v, new profit:%v\n", oldProfit, currentProfit)
+		fmt.Printf("old profit:%v, new profit:%v, current distAdd:%v\n", oldProfit, currentProfit, distAdd)
 		totalProfit = 0
 		totalProfitCount = 0
 	}
@@ -136,6 +138,9 @@ func GetNextDirection(r entity.Response) (obj entity.Payload) {
 	orderX = r.MapSize[0]
 	orderY = r.MapSize[1]
 	orderZ = r.MapSize[2]
+
+	getDistAdd()
+
 	return bfs(r)
 }
 
@@ -150,29 +155,13 @@ func calculateProfit(head []int, food entity.Food, isGolden bool, ind int) float
 	}
 
 	// Calculate FoodFactor
-	profit := float64(food.Points) / (dist + 1)
+	profit := float64(food.Points) / (dist + distAdd)
 
 	if isGolden {
-		profit *= 10
+		profit *= 5
 	}
 
 	return profit
-	switch {
-	case ind%5 == 0:
-		return 0.7*float64(sInfo.TotalFoodPoints) + 0.9*float64(sInfo.CountGoldenFood) - 1*float64(sInfo.CountSnakes) - 0.8*(dist)
-	case ind%5 == 1:
-		foodFactor := 1.0 + float64(sInfo.CountGoldenFood)/float64(sInfo.CountFood)
-		return float64(sInfo.TotalFoodPoints) * foodFactor / (float64(dist) + 1)
-
-	default:
-		profit := float64(food.Points) / (dist + 10)
-
-		if isGolden {
-			profit *= 10
-		}
-
-		return profit
-	}
 }
 
 func bfs(r entity.Response) (obj entity.Payload) {
@@ -180,6 +169,10 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 	// fill obstacles with fences
 	for _, fence := range r.Fences {
+		for _, dir := range dirs {
+			key := [3]int{fence[0] + dir[0], fence[1] + dir[1], fence[2] + dir[2]}
+			obst[key] = true
+		}
 		key := [3]int{fence[0], fence[1], fence[2]}
 		obst[key] = true
 	}
@@ -219,12 +212,13 @@ func bfs(r entity.Response) (obj entity.Payload) {
 		}
 
 		var (
-			maxProfit float64
-			maxInd    int
-			sum       int
-			head      = snake.Geometry[0]
-			minDist   = math.MaxFloat32
-			minInd    int
+			maxProfit       float64
+			maxInd          int
+			sum             int
+			head            = snake.Geometry[0]
+			minDist         = math.MaxFloat32
+			minInd          int
+			totalFoodPoints int
 		)
 
 		for i, f := range r.Food {
@@ -237,6 +231,7 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				maxProfit = profit
 				maxInd = i
 			}
+			totalFoodPoints += f.Points
 
 			dist := getManhattanDistance(head, f.C)
 			if minDist > dist {
@@ -248,16 +243,10 @@ func bfs(r entity.Response) (obj entity.Payload) {
 
 		totalProfit += maxProfit
 		totalProfitCount++
-		//if !isCentralized(head, r.MapSize[0], r.MapSize[1], r.MapSize[2]) && maxProfit < 4 {
-		//	fmt.Println("Идем в центр: ", snake.Id, maxProfit)
-		//	dir := runnerAStar(r, head, getPreviousPoint(snake), []int{r.MapSize[0] / 2, r.MapSize[1] / 2, r.MapSize[2] / 2}, obst)
-		//	obj.Snakes = append(obj.Snakes, entity.Snake{
-		//		Id:        snake.Id,
-		//		Direction: dir,
-		//	})
-		//} else
+
 		if maxProfit > currentProfit {
 			// run for profitable mandarin
+			fmt.Println("get maximum profit")
 			usedIDs[maxInd] = true
 			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[maxInd].C, obst)
 			obj.Snakes = append(obj.Snakes, entity.Snake{
@@ -265,13 +254,41 @@ func bfs(r entity.Response) (obj entity.Payload) {
 				Direction: dir,
 			})
 		} else {
-			// run for minimal distance
-			usedIDs[minInd] = true
-			dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
-			obj.Snakes = append(obj.Snakes, entity.Snake{
-				Id:        snake.Id,
-				Direction: dir,
-			})
+			var (
+				goldProfit float64
+				goldInd    int
+			)
+
+			for i, gold := range r.SpecialFood.Golden {
+				profit := calculateProfit(head, entity.Food{
+					C:      gold,
+					Points: totalFoodPoints / len(r.Food),
+				}, true, 10)
+				if profit > goldProfit {
+					goldProfit = profit
+					goldInd = i
+				}
+			}
+
+			if goldProfit > currentProfit {
+				fmt.Println("went to golden food")
+				usedIDs[goldInd] = true
+				dir := runnerAStar(r, head, getPreviousPoint(snake), r.SpecialFood.Golden[goldInd], obst)
+				obj.Snakes = append(obj.Snakes, entity.Snake{
+					Id:        snake.Id,
+					Direction: dir,
+				})
+			} else {
+				// run for minimal distance
+				fmt.Println("went to minimal distance food")
+				usedIDs[minInd] = true
+				dir := runnerAStar(r, head, getPreviousPoint(snake), r.Food[minInd].C, obst)
+				obj.Snakes = append(obj.Snakes, entity.Snake{
+					Id:        snake.Id,
+					Direction: dir,
+				})
+			}
+
 		}
 	}
 
@@ -458,6 +475,10 @@ func getOpositeDir(dir [3]int) [3]int {
 	}
 
 	return [3]int{0, 0, 0}
+}
+
+func getDistAdd() {
+	distAdd = float64(orderX)/50 + float64(orderY)/50 + float64(orderZ)/30
 }
 
 /*
